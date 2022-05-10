@@ -12,7 +12,19 @@ export class Users {
   username: string;
 
   @Prop({ required: true })
+  profilePicture: string;
+
+  @Prop({ required: true })
   email: string;
+
+  @Prop({ required: true })
+  email_verified: boolean;
+
+  @Prop({ immutable: true, default: () => Date.now() })
+  createdAt: Date;
+
+  @Prop({ default: () => Date.now() })
+  updatedAt: Date;
 }
 
 export const UsersSchema = SchemaFactory.createForClass(Users);

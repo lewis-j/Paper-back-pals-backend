@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateUserDto } from './dto/CreateUserDto';
+import { FireBaseUser } from './dto/firebaseUserDto';
 import { Users, UsersDocument } from './schema/user.schema';
 
 @Injectable()
@@ -10,19 +11,61 @@ export class UsersService {
     @InjectModel(Users.name) private readonly userModel: Model<UsersDocument>,
   ) {}
 
-  async createNewUser(createUser: CreateUserDto) {
-    const { userId, username, email } = createUser;
-    const result = await this.userModel.findOne({ email: email }).exec();
+  async createNewUser(firebaseData: FireBaseUser, createUser: CreateUserDto) {
+    const { username, profilePicture } = createUser;
+    const { user_id, email, email_verified } = firebaseData;
+    try {
+      const existingUser = await this.userModel
+        .findOne({ firebaseId: user_id })
+        .exec();
 
-    if (!result) {
-      const createUser = new this.userModel({
-        firebaseId: userId,
-        username: username,
-        email: email,
-      });
-      await createUser.save();
-      return 'New User was created';
+      if (!existingUser) {
+        const createUser = new this.userModel({
+          firebaseId: user_id,
+          username,
+          profilePicture,
+          email,
+          email_verified,
+        });
+        const newUser = await createUser.save();
+        return newUser;
+      }
+      return existingUser;
+    } catch (error) {
+      return error;
     }
-    return 'User already exist';
+  }
+
+  async getOneUser(_id) {
+    try {
+      const user = await this.userModel.findOne({ firebaseId: _id });
+      if (!user) {
+        throw new Error('User was not found');
+      }
+      return user;
+    } catch (error) {
+      return error;
+    }
+  }
+  async updateUser(firebaseData: FireBaseUser, updatedUser: CreateUserDto) {
+    const { user_id, email, email_verified } = firebaseData;
+    try {
+      const user = await this.userModel.findOne({
+        firebaseId: user_id,
+      });
+      const userData = { ...updatedUser, email, email_verified };
+      console.log('user', updatedUser);
+
+      if (!user) {
+        throw new Error('User was not found');
+      }
+      [...Object.keys(updatedUser)].map((property) => {
+        console.log('properties', property);
+        user[`${property}`] = userData[`${property}`];
+      });
+      return await user.save();
+    } catch (error) {
+      return error;
+    }
   }
 }
