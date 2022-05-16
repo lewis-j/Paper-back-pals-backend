@@ -1,9 +1,10 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Prop, Schema as SchemaDecorator, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Schema } from 'mongoose';
+import { UserBooks } from 'src/user-books/schema/userbooks.schema';
 
 export type UsersDocument = Users & Document;
 
-@Schema()
+@SchemaDecorator()
 export class Users {
   @Prop({ required: true })
   firebaseId: string;
@@ -19,6 +20,9 @@ export class Users {
 
   @Prop({ required: true })
   email_verified: boolean;
+
+  @Prop({type: Schema.Types.ObjectId, ref: 'UserBooks' })
+  currentRead:  UserBooks;
 
   @Prop({ immutable: true, default: () => Date.now() })
   createdAt: Date;

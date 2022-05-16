@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { FirebaseAuthGuard } from 'src/firesbase/firebase-auth-guard';
 import { CreateUserDto } from './dto/CreateUserDto';
+import { UpdateUserDto } from './dto/UpdateUserDto';
 import { UsersService } from './users.service';
 
 @UseGuards(FirebaseAuthGuard)
@@ -29,7 +30,7 @@ export class UsersController {
     return this.usersService.getOneUser(firebaseUser.user.user_id);
   }
   @Put()
-  updateUser(@Request() firebaseUser, @Body() updateUser: CreateUserDto) {
+  updateUser(@Request() firebaseUser, @Body() updateUser: UpdateUserDto) {
     const { user_id, email, email_verified } = firebaseUser.user;
     const firebaseData = { user_id, email, email_verified };
 

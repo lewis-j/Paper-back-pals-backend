@@ -3,7 +3,7 @@ import { createBookDto } from 'src/books/dto/createBookDto';
 import { FirebaseAuthGuard } from 'src/firesbase/firebase-auth-guard';
 import { UserBooksService } from './user-books.service';
 
-@UseGuards(FirebaseAuthGuard)
+// @UseGuards(FirebaseAuthGuard)
 @Controller('user-books')
 export class UserBooksController {
   constructor(private readonly userBooksService: UserBooksService) {}
@@ -15,6 +15,7 @@ export class UserBooksController {
 
   @Get(':id')
   getOwnersBooks(@Param('id') id) {
+    console.log("getting books");
     return this.userBooksService.getUserBooks(id);
   }
 }

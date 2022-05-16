@@ -23,23 +23,26 @@ export class UserBooksService {
       owner: userId,
     });
 
-    const newUserBook = await userBook.save();
+    const newUserBook = await userBook.save(); 
 
-    return newUserBook;
+    return JSON.stringify(newUserBook._id);
   }
 
   async getUserBooks(user_id: string) {
     const userId = new Types.ObjectId(user_id);
     const ownedBooks = await this.userBooksModel
       .find({ owner: userId })
+      .select('-updatedAt -createdAt')
       .populate('book')
       .populate('recipient')
       .exec();
     const borrowedBooks = await this.userBooksModel
       .find({ recipient: userId })
-      .populate('book')
+      .select('-updatedAt -createdAt')
       .populate('owner')
+      .populate('book')
       .exec();
+      console.log("Owned Books",ownedBooks);
     return {
       owned: ownedBooks,
       borrowed: borrowedBooks,

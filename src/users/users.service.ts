@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateUserDto } from './dto/CreateUserDto';
 import { FireBaseUser } from './dto/firebaseUserDto';
+import { UpdateUserDto } from './dto/UpdateUserDto';
 import { Users, UsersDocument } from './schema/user.schema';
 
 @Injectable()
@@ -38,7 +39,7 @@ export class UsersService {
 
   async getOneUser(_id) {
     try {
-      const user = await this.userModel.findOne({ firebaseId: _id });
+      const user = await this.userModel.findOne({ firebaseId: _id }).select('-firebaseId -updatedAt -createdAt');
       if (!user) {
         throw new Error('User was not found');
       }
@@ -47,7 +48,7 @@ export class UsersService {
       return error;
     }
   }
-  async updateUser(firebaseData: FireBaseUser, updatedUser: CreateUserDto) {
+  async updateUser(firebaseData: FireBaseUser, updatedUser: UpdateUserDto) {
     const { user_id, email, email_verified } = firebaseData;
     try {
       const user = await this.userModel.findOne({
