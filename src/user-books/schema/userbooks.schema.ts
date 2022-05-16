@@ -18,10 +18,13 @@ export class UserBooks {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Users' })
   recipient: Users;
 
-  @Prop({ type: String, enum: status, required: true })
+  @Prop({ type: String, enum: status, default: status[0] })
   status: string;
 
-  @Prop({ type: Date, required: true })
+  @Prop({ type: Date, default: () => Date.now() })
+  updatedAt: Date;
+
+  @Prop({ type: Date, immutable: true, default: () => Date.now() })
   createdAt: Date;
 }
 

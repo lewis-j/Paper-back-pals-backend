@@ -18,7 +18,7 @@ export class Books {
   authors: string[];
 
   @Prop({ required: true })
-  description: string[];
+  description: string;
 }
 
 export const BooksSchema = SchemaFactory.createForClass(Books);
