@@ -1,5 +1,5 @@
 export class UpdateUserDto {
-    readonly username: string;
-    readonly profilePicture: string;
-    readonly currentRead: string; 
+  readonly username: string;
+  readonly profilePic: string;
+  readonly currentRead: string;
 }
