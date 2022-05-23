@@ -28,8 +28,10 @@ export class UsersService {
           email_verified,
         });
         const newUser = await createUser.save();
+        console.log('new user', newUser);
         return newUser;
       }
+      console.log('Existing user', existingUser);
       return existingUser;
     } catch (error) {
       return error;
