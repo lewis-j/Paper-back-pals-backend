@@ -49,7 +49,6 @@ UsersSchema.methods.getPublicField = async function () {
     select: "-firebase_id -email_verified -createdAt -updatedAt -friends",
   });
 
-  console.log("this inside userschema", user);
   return {
     _id: this._id,
     username: this.username,

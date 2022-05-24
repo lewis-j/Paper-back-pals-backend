@@ -17,9 +17,14 @@ import { UsersService } from "./users.service";
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get()
+  getToken(@Request() req) {
+    const token = req.csrfToken();
+    return token;
+  }
+
   @Post()
   createUser(@Request() firebaseUser, @Body() createUser: CreateUserDto) {
-    console.log("request from createUser", firebaseUser.user);
     const { user_id, email, email_verified } = firebaseUser.user;
     const firebaseData = { user_id, email, email_verified };
 
@@ -30,8 +35,10 @@ export class UsersController {
     return this.usersService.getOneUser(firebaseUser.user.user_id);
   }
 
-  @Get("google")
+  @Post("google")
   getGoogleUser(@Request() firebaseUser) {
+    // console.log("token in google route", firebaseUser.csrfToken());
+    // console.log("request in google route", firebaseUser.cookies);
     const {
       name: username,
       picture: profilePic,

@@ -29,6 +29,8 @@
     "@nestjs/passport": "^8.2.1",
     "@nestjs/platform-express": "^8.0.0",
     "class-transformer": "^0.5.1",
+    "cookie-parser": "^1.4.6",
+    "csurf": "^1.11.0",
     "firebase-admin": "^10.0.2",
     "mongoose": "^6.3.0",
     "passport": "^0.5.2",
