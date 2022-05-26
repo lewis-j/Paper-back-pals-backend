@@ -6,14 +6,14 @@ import {
   Post,
   UseGuards,
   Put,
-} from "@nestjs/common";
-import { FirebaseAuthGuard } from "src/firesbase/firebase-auth-guard";
-import { CreateUserDto } from "./dto/CreateUserDto";
-import { UpdateUserDto } from "./dto/UpdateUserDto";
-import { UsersService } from "./users.service";
+} from '@nestjs/common';
+import { FirebaseAuthGuard } from 'src/authentication/firebase-auth-guard';
+import { CreateUserDto } from './dto/CreateUserDto';
+import { UpdateUserDto } from './dto/UpdateUserDto';
+import { UsersService } from './users.service';
 
 @UseGuards(FirebaseAuthGuard)
-@Controller("users")
+@Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -32,10 +32,10 @@ export class UsersController {
   }
   @Get()
   getUser(@Request() firebaseUser) {
-    return this.usersService.getOneUser(firebaseUser.user.user_id);
+    return this.usersService.getUserByFirebaseId(firebaseUser.user.user_id);
   }
 
-  @Post("google")
+  @Post('google')
   getGoogleUser(@Request() firebaseUser) {
     // console.log("token in google route", firebaseUser.csrfToken());
     // console.log("request in google route", firebaseUser.cookies);

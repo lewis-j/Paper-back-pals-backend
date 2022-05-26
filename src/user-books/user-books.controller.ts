@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { createBookDto } from 'src/books/dto/createBookDto';
-import { FirebaseAuthGuard } from 'src/firesbase/firebase-auth-guard';
+import { FirebaseAuthGuard } from 'src/authentication/firebase-auth-guard';
 import { UserBooksService } from './user-books.service';
 
 // @UseGuards(FirebaseAuthGuard)
@@ -15,7 +15,7 @@ export class UserBooksController {
 
   @Get(':id')
   getOwnersBooks(@Param('id') id) {
-    console.log("getting books");
+    console.log('getting books');
     return this.userBooksService.getUserBooks(id);
   }
 }

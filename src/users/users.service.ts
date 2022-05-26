@@ -1,16 +1,16 @@
-import { Injectable } from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
-import { CreateUserDto } from "./dto/CreateUserDto";
-import { FireBaseUser } from "./dto/firebaseUserDto";
-import { GoogleUserDto } from "./dto/GoogleUserDto";
-import { UpdateUserDto } from "./dto/UpdateUserDto";
-import { Users, UsersDocument } from "./schema/user.schema";
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { CreateUserDto } from './dto/CreateUserDto';
+import { FireBaseUser } from './dto/firebaseUserDto';
+import { GoogleUserDto } from './dto/GoogleUserDto';
+import { UpdateUserDto } from './dto/UpdateUserDto';
+import { Users, UsersDocument } from './schema/user.schema';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(Users.name) private readonly userModel: Model<UsersDocument>
+    @InjectModel(Users.name) private readonly userModel: Model<UsersDocument>,
   ) {}
 
   async getUserFromGoogle(firebaseUser: GoogleUserDto) {
@@ -27,8 +27,8 @@ export class UsersService {
       savedUser.getPublicField();
 
       return await savedUser.populate({
-        path: "friends",
-        select: "-firebase_id, -email_verified -updatedAt -createdAt",
+        path: 'friends',
+        select: '-firebase_id, -email_verified -updatedAt -createdAt',
       });
     } catch (err) {
       return err;
@@ -59,15 +59,23 @@ export class UsersService {
       return error;
     }
   }
+  async getUserById(_id) {
+    try {
+      const user = await this.userModel.findById(_id);
+      return user;
+    } catch (err) {
+      throw new NotFoundException('User does not exist');
+    }
+  }
 
-  async getOneUser(_id) {
+  async getUserByFirebaseId(_id) {
     try {
       const user = await this.userModel
         .findOne({ firebase_Id: _id })
-        .select("-firebaseId -updatedAt -createdAt");
+        .select('-firebaseId -updatedAt -createdAt');
 
       if (!user) {
-        throw new Error("User was not found");
+        throw new NotFoundException('User does not exist');
       }
 
       return user;
@@ -84,7 +92,7 @@ export class UsersService {
       const userData = { ...updatedUser, email, email_verified };
 
       if (!user) {
-        throw new Error("User was not found");
+        throw new NotFoundException('User does not exist');
       }
       [...Object.keys(updatedUser)].map((property) => {
         user[`${property}`] = userData[`${property}`];

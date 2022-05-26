@@ -6,17 +6,23 @@ import {
   Request,
   Response,
   UseGuards,
-} from "@nestjs/common";
-import { Response as ResponseType, Request as RequestType } from "express";
-import { AuthenticationService } from "./authentication.service";
-import { FirebaseAuthGuard } from "src/firesbase/firebase-auth-guard";
-import { FirebaseAuthGuardCookies } from "src/firesbase/firebase-auth-guard-cookies";
+} from '@nestjs/common';
+import { Response as ResponseType, Request as RequestType } from 'express';
+import { AuthenticationService } from './authentication.service';
+// import { FirebaseAuthGuardCookies } from 'src/firebase/firebase-auth-guard-cookies';
+import { FirebaseAuthGuard } from 'src/authentication/firebase-auth-guard';
+import { UsersService } from 'src/users/users.service';
+import TokenPayload from './tokenPayload.interface';
+import { JwtAuthGuard } from './jwt-auth-guard';
 
-@Controller("authentication")
+@Controller('authentication')
 export class AuthenticationController {
-  constructor(private readonly authenticationService: AuthenticationService) {}
+  constructor(
+    private readonly authenticationService: AuthenticationService,
+    private readonly usersService: UsersService,
+  ) {}
 
-  @UseGuards(FirebaseAuthGuard)
+  // @UseGuards(FirebaseAuthGuard)
   @Get()
   getCsrfToken(@Request() req) {
     const token = req.csrfToken();
@@ -25,22 +31,30 @@ export class AuthenticationController {
 
   @UseGuards(FirebaseAuthGuard)
   @Post()
-  setAuthenticatedUser(
-    @Request() req,
-    @Response() res: ResponseType
-  ): ResponseType {
-    const idToken = req.user?.accessToken;
-    res.cookie("Authorization", idToken, {
+  async setAuthenticatedUser(@Request() req, @Response() res: ResponseType) {
+    const firebase_id = req.user?.user_id;
+    const user = await this.usersService.getUserByFirebaseId(firebase_id);
+    const idToken = await this.authenticationService.getToken(user._id);
+    console.log('id token:', idToken);
+    res.cookie('Authorization', idToken, {
       signed: true,
       maxAge: 1000 * 60 * 60 * 24 * 7,
       httpOnly: true,
     });
-    return res.send();
+    console.log('response from auth route', req.user);
+    return res.send({ user });
   }
-  @UseGuards(FirebaseAuthGuardCookies)
+  @UseGuards(JwtAuthGuard)
+  @Post('test')
+  async testingGuards(@Request() req) {
+    console.log('request in test route', req.user);
+    return req.signedCookies.Authorization;
+  }
+
+  // @UseGuards(FirebaseAuthGuardCookies)
   @Delete()
   removeAuthenticatedUser(@Response() res: ResponseType) {
-    res.clearCookie("Authorization");
+    res.clearCookie('Authorization');
     return res.send();
   }
 }
