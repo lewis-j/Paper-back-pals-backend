@@ -1,8 +1,7 @@
-import { Module } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { UsersController } from './users.controller';
-import { MongooseModule } from '@nestjs/mongoose';
-import { Users, UsersSchema, UsersDocument } from './schema/user.schema';
+import { Module } from "@nestjs/common";
+import { UsersService } from "./users.service";
+import { MongooseModule } from "@nestjs/mongoose";
+import { Users, UsersSchema, UsersDocument } from "./schema/user.schema";
 
 @Module({
   imports: [
@@ -11,7 +10,7 @@ import { Users, UsersSchema, UsersDocument } from './schema/user.schema';
         name: Users.name,
         useFactory: function () {
           const schema = UsersSchema;
-          schema.pre<UsersDocument>('save', function () {
+          schema.pre<UsersDocument>("save", function () {
             this.updatedAt = new Date();
           });
           return schema;
@@ -19,7 +18,6 @@ import { Users, UsersSchema, UsersDocument } from './schema/user.schema';
       },
     ]),
   ],
-  controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],
 })
