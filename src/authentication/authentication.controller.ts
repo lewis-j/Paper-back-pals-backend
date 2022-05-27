@@ -13,7 +13,6 @@ import { AuthenticationService } from "./authentication.service";
 import { FirebaseAuthGuard } from "src/authentication/firebase-auth-guard";
 import { UsersService } from "src/users/users.service";
 import { JwtAuthGuard } from "./jwt-auth-guard";
-import { CreateUserDto } from "src/users/dto/CreateUserDto";
 import RequestWithUser from "./requestWithUser.interface";
 
 @Controller("authentication")
@@ -27,6 +26,7 @@ export class AuthenticationController {
   @Get()
   async fetchUser(@Request() req) {
     const { user_id } = req.user;
+    console.log("user in fetch::", req.user);
     return await this.usersService.getUserById(user_id);
   }
 
@@ -38,17 +38,19 @@ export class AuthenticationController {
 
   @UseGuards(FirebaseAuthGuard)
   @Post("login")
-  async setAuthenticatedUser(@Request() req, @Response() res: ResponseType) {
-    const firebase_id = req.user?.user_id;
+  async setAuthenticatedUser(
+    @Request() req: RequestWithUser,
+    @Response() res: ResponseType
+  ) {
+    const { firebase_id } = req.user;
     const user = await this.usersService.getUserByFirebaseId(firebase_id);
     const idToken = await this.authenticationService.getToken(user._id);
-    res.cookie("Authorization", idToken, {
-      signed: true,
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-      httpOnly: true,
-    });
+    const resWithCookies = this.authenticationService.setAuthCookies(
+      res,
+      idToken
+    );
 
-    return res.send({ user });
+    return resWithCookies.send(user);
   }
 
   @UseGuards(FirebaseAuthGuard)
@@ -60,33 +62,29 @@ export class AuthenticationController {
     const { user: firebaseUser } = req;
     const user = await this.usersService.getUserFromGoogle(firebaseUser);
     const idToken = await this.authenticationService.getToken(user._id);
-    res.cookie("Authorization", idToken, {
-      signed: true,
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-      httpOnly: true,
-    });
+    const resWithCookies = this.authenticationService.setAuthCookies(
+      res,
+      idToken
+    );
 
-    return res.send(user);
+    return resWithCookies.send(user);
   }
 
   @UseGuards(FirebaseAuthGuard)
   @Post("register")
   async registerNewUser(
     @Request() req: RequestWithUser,
-    @Response() res: ResponseType,
-    @Body() newUser: CreateUserDto
+    @Response() res: ResponseType
   ) {
     const { user: firebaseUser } = req;
     console.log("firebase User:", firebaseUser);
     const user = await this.usersService.createUserFromFireUser(firebaseUser);
     const idToken = await this.authenticationService.getToken(user._id);
-    res.cookie("Authorization", idToken, {
-      signed: true,
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-      httpOnly: true,
-    });
-    console.log("response from auth route", req.user);
-    return res.send({ user });
+    const resWithCookies = this.authenticationService.setAuthCookies(
+      res,
+      idToken
+    );
+    return resWithCookies.send({ user });
   }
 
   @Delete("logout")

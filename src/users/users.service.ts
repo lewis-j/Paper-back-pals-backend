@@ -20,17 +20,21 @@ export class UsersService {
       const existingUser = await this.userModel
         .findOne({ firebase_id: id })
         .exec();
-      existingUser.getPublicField();
+      existingUser
+        ? console.log("user exist")
+        : console.log("user does not exist");
       if (existingUser) return await existingUser.getPublicField();
 
-      const newUser = await this.userModel.create({ ...firebaseUser });
+      const newUser = await this.userModel.create(firebaseUser);
       const savedUser = await newUser.save();
       savedUser.getPublicField();
 
-      return await savedUser.populate({
+      const user = await savedUser.populate({
         path: "friends",
         select: "-firebase_id, -email_verified -updatedAt -createdAt",
       });
+      console.log("created user in google auth::", user);
+      return user;
     } catch (err) {
       return err;
     }
@@ -84,7 +88,7 @@ export class UsersService {
   async getUserByFirebaseId(firebase_id) {
     try {
       const user = await this.userModel
-        .findOne({ firebase_Id: firebase_id })
+        .findOne({ firebase_id: firebase_id })
         .select("-firebaseId -updatedAt -createdAt");
 
       if (!user) {
