@@ -1,5 +1,9 @@
-import { Prop, Schema as SchemaDecorator, SchemaFactory } from '@nestjs/mongoose';
-import { Document,Schema } from 'mongoose';
+import {
+  Prop,
+  Schema as SchemaDecorator,
+  SchemaFactory,
+} from '@nestjs/mongoose';
+import { Document, Schema } from 'mongoose';
 import { Books } from 'src/books/schema/book.schema';
 import { Users } from 'src/users/schema/user.schema';
 import { status } from './status-enums';
@@ -28,3 +32,7 @@ export class UserBooks {
 }
 
 export const UserBooksSchema = SchemaFactory.createForClass(UserBooks);
+
+UserBooksSchema.pre<UserBooksDocument>('save', function () {
+  this.updatedAt = new Date();
+});

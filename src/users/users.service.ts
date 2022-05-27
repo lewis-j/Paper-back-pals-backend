@@ -1,17 +1,17 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
-import { CreateFireUserDto } from "./dto/CreateFireUserDto";
-import { CreateUserDto } from "./dto/CreateUserDto";
-import { FireBaseUserDto } from "./dto/FireBaseUserDto";
-import { GoogleUserDto } from "./dto/GoogleUserDto";
-import { UpdateUserDto } from "./dto/UpdateUserDto";
-import { Users, UsersDocument } from "./schema/user.schema";
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { CreateFireUserDto } from './dto/CreateFireUserDto';
+import { CreateUserDto } from './dto/CreateUserDto';
+import { FireBaseUserDto } from './dto/FireBaseUserDto';
+import { GoogleUserDto } from './dto/GoogleUserDto';
+import { UpdateUserDto } from './dto/UpdateUserDto';
+import { Users, UsersDocument } from './schema/user.schema';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(Users.name) private readonly userModel: Model<UsersDocument>
+    @InjectModel(Users.name) private readonly userModel: Model<UsersDocument>,
   ) {}
 
   async getUserFromGoogle(firebaseUser: GoogleUserDto) {
@@ -20,21 +20,8 @@ export class UsersService {
       const existingUser = await this.userModel
         .findOne({ firebase_id: id })
         .exec();
-      existingUser
-        ? console.log("user exist")
-        : console.log("user does not exist");
-      if (existingUser) return await existingUser.getPublicField();
-
-      const newUser = await this.userModel.create(firebaseUser);
-      const savedUser = await newUser.save();
-      savedUser.getPublicField();
-
-      const user = await savedUser.populate({
-        path: "friends",
-        select: "-firebase_id, -email_verified -updatedAt -createdAt",
-      });
-      console.log("created user in google auth::", user);
-      return user;
+      if (existingUser) return existingUser;
+      return await this.userModel.create(firebaseUser);
     } catch (err) {
       return err;
     }
@@ -42,7 +29,7 @@ export class UsersService {
 
   async createNewUser(
     firebaseData: CreateFireUserDto,
-    createUser: CreateUserDto
+    createUser: CreateUserDto,
   ) {
     const { username, profilePic } = createUser;
     const { firebase_id, email, email_verified } = firebaseData;
@@ -81,7 +68,7 @@ export class UsersService {
       const user = await this.userModel.findById(_id);
       return user;
     } catch (err) {
-      throw new NotFoundException("User does not exist");
+      throw new NotFoundException('User does not exist');
     }
   }
 
@@ -89,10 +76,10 @@ export class UsersService {
     try {
       const user = await this.userModel
         .findOne({ firebase_id: firebase_id })
-        .select("-firebaseId -updatedAt -createdAt");
+        .select('-firebaseId -updatedAt -createdAt');
 
       if (!user) {
-        throw new NotFoundException("User does not exist");
+        throw new NotFoundException('User does not exist');
       }
 
       return user;
@@ -102,7 +89,7 @@ export class UsersService {
   }
   async updateUser(
     firebaseData: CreateFireUserDto,
-    updatedUser: UpdateUserDto
+    updatedUser: UpdateUserDto,
   ) {
     const { firebase_id, email, email_verified } = firebaseData;
     try {
@@ -112,7 +99,7 @@ export class UsersService {
       const userData = { ...updatedUser, email, email_verified };
 
       if (!user) {
-        throw new NotFoundException("User does not exist");
+        throw new NotFoundException('User does not exist');
       }
       [...Object.keys(updatedUser)].map((property) => {
         user[`${property}`] = userData[`${property}`];

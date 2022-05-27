@@ -1,20 +1,14 @@
-import { Module } from "@nestjs/common";
-import { UsersService } from "./users.service";
-import { MongooseModule } from "@nestjs/mongoose";
-import { Users, UsersSchema, UsersDocument } from "./schema/user.schema";
+import { Module } from '@nestjs/common';
+import { UsersService } from './users.service';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Users, UsersSchema } from './schema/user.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeatureAsync([
+    MongooseModule.forFeature([
       {
         name: Users.name,
-        useFactory: function () {
-          const schema = UsersSchema;
-          schema.pre<UsersDocument>("save", function () {
-            this.updatedAt = new Date();
-          });
-          return schema;
-        },
+        schema: UsersSchema,
       },
     ]),
   ],

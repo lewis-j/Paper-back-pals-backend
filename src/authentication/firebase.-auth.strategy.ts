@@ -1,13 +1,13 @@
-import { PassportStrategy } from "@nestjs/passport";
-import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { Strategy, ExtractJwt } from "passport-firebase-jwt";
-import * as firebase from "firebase-admin";
+import { PassportStrategy } from '@nestjs/passport';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Strategy, ExtractJwt } from 'passport-firebase-jwt';
+import * as firebase from 'firebase-admin';
 //https://stackoverflow.com/questions/32950966/typescript-compiler-error-when-importing-json-file
 
 @Injectable()
 export class FirebaseAuthStrategy extends PassportStrategy(
   Strategy,
-  "firebase-auth"
+  'firebase-auth',
 ) {
   private defaultApp: any;
   constructor() {
@@ -27,7 +27,7 @@ export class FirebaseAuthStrategy extends PassportStrategy(
     if (!firebaseUser) {
       throw new UnauthorizedException();
     }
-    console.log("Firebase User in gaurd", firebaseUser);
+    console.log('Firebase User in gaurd', firebaseUser);
     const { user_id, name, email, email_verified, picture } = firebaseUser;
     return {
       firebase_id: user_id,

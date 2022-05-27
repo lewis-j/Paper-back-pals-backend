@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { createBookDto } from 'src/books/dto/createBookDto';
-import { FirebaseAuthGuard } from 'src/authentication/firebase-auth-guard';
+import { JwtAuthGuard } from 'src/authentication/jwt-auth-guard';
 import { UserBooksService } from './user-books.service';
 
-// @UseGuards(FirebaseAuthGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('user-books')
 export class UserBooksController {
   constructor(private readonly userBooksService: UserBooksService) {}
