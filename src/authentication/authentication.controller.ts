@@ -8,7 +8,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Response as ResponseType, Request as RequestType } from 'express';
+import { Response as ResponseType } from 'express';
 import { AuthenticationService } from './authentication.service';
 import { Users } from 'src/users/schema/user.schema';
 import { FirebaseAuthGuard } from 'src/authentication/firebase-auth-guard';
@@ -27,10 +27,8 @@ export class AuthenticationController {
   @UseGuards(JwtAuthGuard)
   @Get()
   async fetchUser(@Request() req) {
-    console.log('request user', req.user);
     const { user_id } = req.user;
     const user = await this.usersService.getUserById(user_id);
-    console.log('user in fetch function', user);
     return user;
   }
 
@@ -61,7 +59,7 @@ export class AuthenticationController {
     @Response({ passthrough: true }) res: ResponseType,
   ) {
     const { user: firebaseUser } = req;
-    const user = await this.usersService.getUserFromGoogle(firebaseUser);
+    const user = await this.usersService.fetchOrCreateUser(firebaseUser);
     const idToken = await this.authenticationService.getToken(user._id);
     this.authenticationService.setAuthCookies(res, idToken);
     return user;
@@ -74,7 +72,6 @@ export class AuthenticationController {
     @Response({ passthrough: true }) res: ResponseType,
   ) {
     const { user: firebaseUser } = req;
-    console.log('firebase User:', firebaseUser);
     const user = await this.usersService.createUserFromFireUser(firebaseUser);
     const idToken = await this.authenticationService.getToken(user._id);
     this.authenticationService.setAuthCookies(res, idToken);

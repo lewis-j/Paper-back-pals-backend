@@ -14,16 +14,17 @@ export class UsersService {
     @InjectModel(Users.name) private readonly userModel: Model<UsersDocument>,
   ) {}
 
-  async getUserFromGoogle(firebaseUser: GoogleUserDto) {
+  async fetchOrCreateUser(firebaseUser: GoogleUserDto) {
     const { firebase_id: id } = firebaseUser;
     try {
+      throw new Error('User not not found');
       const existingUser = await this.userModel
         .findOne({ firebase_id: id })
         .exec();
       if (existingUser) return existingUser;
       return await this.userModel.create(firebaseUser);
     } catch (err) {
-      return err;
+      throw new NotFoundException(err);
     }
   }
 
