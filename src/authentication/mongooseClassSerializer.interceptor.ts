@@ -35,7 +35,8 @@ function MongooseClassSerializerInterceptor(
       response: PlainLiteralObject | PlainLiteralObject[],
       options: ClassTransformOptions,
     ) {
-      return super.serialize(this.prepareResponse(response), options);
+      const res = super.serialize(this.prepareResponse(response), options);
+      return res;
     }
   };
 }

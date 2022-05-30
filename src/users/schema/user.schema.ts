@@ -4,15 +4,20 @@ import {
   SchemaFactory,
 } from '@nestjs/mongoose';
 import { Document, Schema } from 'mongoose';
+// import { UserBooks } from 'src/user-books/schema/userbooks.schema';
+import { Exclude, Transform, Type } from 'class-transformer';
 import { UserBooks } from 'src/user-books/schema/userbooks.schema';
-import { Exclude } from 'class-transformer';
 
 export type UsersDocument = Users & Document;
 
 @SchemaDecorator()
 export class Users {
-  @Prop({ unique: true })
   @Exclude()
+  @Transform(({ value }) => value.toString())
+  _id: string;
+
+  @Exclude()
+  @Prop({ unique: true, index: true })
   firebase_id: string;
 
   @Prop({ required: true })
@@ -27,11 +32,13 @@ export class Users {
   @Prop({ default: false })
   email_verified: boolean;
 
-  @Prop({ type: [Schema.Types.ObjectId], ref: 'Users', default: null })
-  friends: [Users];
-
   @Prop({ type: Schema.Types.ObjectId, ref: 'UserBooks', default: null })
+  @Type(() => UserBooks)
   currentRead: UserBooks;
+
+  @Prop({ type: [Schema.Types.ObjectId], ref: 'Users', default: null })
+  @Type(() => Users)
+  friends: Users;
 
   @Prop({ immutable: true, default: () => Date.now() })
   @Exclude()

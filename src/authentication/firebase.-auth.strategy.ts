@@ -2,6 +2,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Strategy, ExtractJwt } from 'passport-firebase-jwt';
 import * as firebase from 'firebase-admin';
+import { Request } from 'express';
 //https://stackoverflow.com/questions/32950966/typescript-compiler-error-when-importing-json-file
 
 @Injectable()
@@ -13,10 +14,11 @@ export class FirebaseAuthStrategy extends PassportStrategy(
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      passReqToCallback: true,
     });
     this.defaultApp = firebase;
   }
-  async validate(token: string) {
+  async validate(req: Request, token: string) {
     const firebaseUser: any = await this.defaultApp
       .auth()
       .verifyIdToken(token, true)
