@@ -27,35 +27,35 @@ export class UsersService {
     }
   }
 
-  async createNewUser(
-    firebaseData: CreateFireUserDto,
-    createUser: CreateUserDto,
-  ) {
-    const { username, profilePic } = createUser;
-    const { firebase_id, email, email_verified } = firebaseData;
-    try {
-      const existingUser = await this.userModel
-        .findOne({ firebaseId: firebase_id })
-        .exec();
+  // async createNewUser(
+  //   firebaseData: CreateFireUserDto,
+  //   createUser: CreateUserDto,
+  // ) {
+  //   const { username, profilePic } = createUser;
+  //   const { firebase_id, email, email_verified } = firebaseData;
+  //   try {
+  //     const existingUser = await this.userModel
+  //       .findOne({ firebaseId: firebase_id })
+  //       .exec();
 
-      if (!existingUser) {
-        const createUser = new this.userModel({
-          firebase_id,
-          username,
-          profilePic,
-          email,
-          email_verified,
-        });
-        const newUser = await createUser.save();
-        console.log('new user', newUser);
-        return newUser;
-      }
-      console.log('Existing user', existingUser);
-      return existingUser;
-    } catch (error) {
-      return error;
-    }
-  }
+  //     if (!existingUser) {
+  //       const createUser = new this.userModel({
+  //         firebase_id,
+  //         username,
+  //         profilePic,
+  //         email,
+  //         email_verified,
+  //       });
+  //       const newUser = await createUser.save();
+  //       console.log('new user', newUser);
+  //       return newUser;
+  //     }
+  //     console.log('Existing user', existingUser);
+  //     return existingUser;
+  //   } catch (error) {
+  //     return error;
+  //   }
+  // }
 
   async createUserFromFireUser(firebaseUser: FireBaseUserDto) {
     try {
