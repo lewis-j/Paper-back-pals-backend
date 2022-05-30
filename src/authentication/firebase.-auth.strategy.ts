@@ -1,22 +1,9 @@
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Strategy, ExtractJwt } from 'passport-firebase-jwt';
-import * as firebaseConfig from './firebase.config.json';
 import * as firebase from 'firebase-admin';
+import { Request } from 'express';
 //https://stackoverflow.com/questions/32950966/typescript-compiler-error-when-importing-json-file
-
-const firebase_params = {
-  type: firebaseConfig.type,
-  projectId: firebaseConfig.project_id,
-  privateKeyId: firebaseConfig.private_key_id,
-  privateKey: firebaseConfig.private_key,
-  clientEmail: firebaseConfig.client_email,
-  clientId: firebaseConfig.client_id,
-  authUri: firebaseConfig.auth_uri,
-  tokenUri: firebaseConfig.token_uri,
-  authProviderX509CertUrl: firebaseConfig.auth_provider_x509_cert_url,
-  clientC509CertUrl: firebaseConfig.client_x509_cert_url,
-};
 
 @Injectable()
 export class FirebaseAuthStrategy extends PassportStrategy(
@@ -27,12 +14,11 @@ export class FirebaseAuthStrategy extends PassportStrategy(
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      passReqToCallback: true,
     });
-    this.defaultApp = firebase.initializeApp({
-      credential: firebase.credential.cert(firebase_params),
-    });
+    this.defaultApp = firebase;
   }
-  async validate(token: string) {
+  async validate(req: Request, token: string) {
     const firebaseUser: any = await this.defaultApp
       .auth()
       .verifyIdToken(token, true)
@@ -43,6 +29,14 @@ export class FirebaseAuthStrategy extends PassportStrategy(
     if (!firebaseUser) {
       throw new UnauthorizedException();
     }
-    return firebaseUser;
+    console.log('Firebase User in gaurd', firebaseUser);
+    const { user_id, name, email, email_verified, picture } = firebaseUser;
+    return {
+      firebase_id: user_id,
+      username: name,
+      email,
+      email_verified,
+      profilePic: picture,
+    };
   }
 }
