@@ -13,7 +13,7 @@ export class AuthenticationService {
     private readonly configService: ConfigService,
   ) {}
 
-  public async getToken(user_id: number) {
+  public async getToken(user_id: string) {
     const payload: TokenPayload = { user_id };
     const token = this.jwtService.sign(payload);
     return token;

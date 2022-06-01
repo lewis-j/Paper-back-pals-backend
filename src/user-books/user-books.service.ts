@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { UserBooks, UserBooksDocument } from './schema/userbooks.schema';
@@ -22,30 +22,27 @@ export class UserBooksService {
       book: book_id,
       owner: userId,
     });
-
-    const newUserBook = await userBook.save(); 
-
-    return JSON.stringify(newUserBook._id);
+    const newUserBook = await userBook.save();
+    return newUserBook.populate('book');
   }
 
-  async getUserBooks(user_id: string) {
+  async getOWnedBooks(user_id: string) {
     const userId = new Types.ObjectId(user_id);
-    const ownedBooks = await this.userBooksModel
+    return await this.userBooksModel
       .find({ owner: userId })
-      .select('-updatedAt -createdAt')
-      .populate('book')
-      .populate('recipient')
+      .populate(['book', 'recipient'])
       .exec();
-    const borrowedBooks = await this.userBooksModel
-      .find({ recipient: userId })
-      .select('-updatedAt -createdAt')
-      .populate('owner')
-      .populate('book')
-      .exec();
-      console.log("Owned Books",ownedBooks);
-    return {
-      owned: ownedBooks,
-      borrowed: borrowedBooks,
-    };
+  }
+
+  async getBorrowedBooks(user_id: string) {
+    const userId = new Types.ObjectId(user_id);
+    try {
+      return await this.userBooksModel
+        .find({ recipient: userId })
+        .populate(['book', 'owner'])
+        .exec();
+    } catch (error) {
+      return Promise.reject(error);
+    }
   }
 }

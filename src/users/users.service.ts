@@ -17,7 +17,6 @@ export class UsersService {
   async fetchOrCreateUser(firebaseUser: GoogleUserDto) {
     const { firebase_id: id } = firebaseUser;
     try {
-      throw new Error('User not not found');
       const existingUser = await this.userModel
         .findOne({ firebase_id: id })
         .exec();

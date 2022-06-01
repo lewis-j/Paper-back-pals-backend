@@ -29,7 +29,7 @@ export class FirebaseAuthStrategy extends PassportStrategy(
     if (!firebaseUser) {
       throw new UnauthorizedException();
     }
-    console.log('Firebase User in gaurd', firebaseUser);
+
     const { user_id, name, email, email_verified, picture } = firebaseUser;
     return {
       firebase_id: user_id,
