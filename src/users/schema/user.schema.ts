@@ -12,12 +12,11 @@ export type UsersDocument = Users & Document;
 
 @SchemaDecorator()
 export class Users {
-  @Exclude()
   @Transform(({ value }) => value.toString())
   _id: string;
 
-  @Exclude()
   @Prop({ unique: true, index: true })
+  @Exclude()
   firebase_id: string;
 
   @Prop({ required: true })

@@ -21,8 +21,7 @@ export class UserBooks {
   @Type(() => Users)
   @Transform(
     (value) => {
-      console.log('transforming value', value);
-      return value;
+      if (Object.keys(value.value).length !== 0) return value.value;
     },
     { toClassOnly: true },
   )
@@ -30,6 +29,12 @@ export class UserBooks {
 
   @Prop({ type: Schema.Types.ObjectId, ref: 'Users' })
   @Type(() => Users)
+  @Transform(
+    (value) => {
+      if (Object.keys(value.value).length !== 0) return value.value;
+    },
+    { toClassOnly: true },
+  )
   recipient: Users;
 
   @Prop({ type: String, enum: status, default: status[0] })

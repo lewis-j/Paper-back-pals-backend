@@ -23,7 +23,7 @@ export class UserBooksService {
       owner: userId,
     });
     const newUserBook = await userBook.save();
-    return newUserBook.populate('book');
+    return newUserBook.populate(['book', 'owner']);
   }
 
   async getOWnedBooks(user_id: string) {

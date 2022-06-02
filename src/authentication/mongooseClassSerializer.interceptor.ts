@@ -35,7 +35,7 @@ function MongooseClassSerializerInterceptor(
       response: PlainLiteralObject | PlainLiteralObject[],
       options: ClassTransformOptions,
     ) {
-      console.log('PlainLiteralObject', response);
+      // console.log('PlainLiteralObject', response);
       const res = super.serialize(this.prepareResponse(response), options);
       return res;
     }
