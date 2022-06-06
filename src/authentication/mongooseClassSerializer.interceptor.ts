@@ -18,7 +18,11 @@ function MongooseClassSerializerInterceptor(
         return document;
       }
 
-      return plainToInstance(classToIntercept, document.toJSON());
+      const plainInstance = plainToInstance(
+        classToIntercept,
+        document.toJSON(),
+      );
+      return plainInstance;
     }
 
     private prepareResponse(

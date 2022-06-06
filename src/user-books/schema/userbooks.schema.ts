@@ -5,7 +5,7 @@ import {
 } from '@nestjs/mongoose';
 import { Document, Schema } from 'mongoose';
 import { Books } from 'src/books/schema/book.schema';
-import { Users } from 'src/users/schema/user.schema';
+import { User } from 'src/user/schema/user.schema';
 import { status } from './status-enums';
 import { Exclude, Transform, Type } from 'class-transformer';
 
@@ -17,25 +17,25 @@ export class UserBooks {
   @Type(() => Books)
   book: Books;
 
-  @Prop({ type: Schema.Types.ObjectId, ref: 'Users', required: true })
-  @Type(() => Users)
+  @Prop({ type: Schema.Types.ObjectId, ref: 'User', required: true })
+  @Type(() => User)
   @Transform(
     (value) => {
       if (Object.keys(value.value).length !== 0) return value.value;
     },
     { toClassOnly: true },
   )
-  owner: Users;
+  owner: User;
 
-  @Prop({ type: Schema.Types.ObjectId, ref: 'Users' })
-  @Type(() => Users)
+  @Prop({ type: Schema.Types.ObjectId, ref: 'User' })
+  @Type(() => User)
   @Transform(
     (value) => {
       if (Object.keys(value.value).length !== 0) return value.value;
     },
     { toClassOnly: true },
   )
-  recipient: Users;
+  recipient: User;
 
   @Prop({ type: String, enum: status, default: status[0] })
   status: string;

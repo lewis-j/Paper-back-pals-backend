@@ -20,7 +20,6 @@ import { UserBooks } from './schema/userbooks.schema';
 export class UserBooksController {
   constructor(private readonly userBooksService: UserBooksService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Post()
   createUserBook(
     @Request() req: RequestWithUID,
@@ -30,7 +29,6 @@ export class UserBooksController {
     return this.userBooksService.createUserBook(user_id, userBook);
   }
 
-  @UseGuards(JwtAuthGuard)
   @UseInterceptors(MongooseClassSerializerInterceptor(UserBooks))
   @Get('owned')
   getOwnedBooks(@Request() req: RequestWithUID) {
@@ -38,7 +36,6 @@ export class UserBooksController {
     return this.userBooksService.getOWnedBooks(user_id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @UseInterceptors(MongooseClassSerializerInterceptor(UserBooks))
   @Get('borrowed')
   getBorrowedBooks(@Request() req: RequestWithUID) {
