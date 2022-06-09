@@ -16,6 +16,7 @@ export class UserService {
   ) {}
 
   async upsertFireUser(firebaseUser: GoogleUserDto) {
+    console.log('firebase_user', firebaseUser);
     const { firebase_id: id } = firebaseUser;
     try {
       const existingUser = await this.userModel.getFireUser(id);
@@ -23,7 +24,7 @@ export class UserService {
       const newUser = await this.userModel.create(firebaseUser);
       return { user: newUser, statusCode: 201 };
     } catch (err) {
-      throw new NotFoundException(err);
+      throw new Error(err);
     }
   }
 
@@ -83,17 +84,28 @@ export class UserService {
 
   async getOneUser(_id: string) {
     try {
-      return await this.userModel.findById(_id).populate('friends').exec();
+      const user = await this.userModel
+        .findById(_id)
+        .populate('friends')
+        .exec();
+      console.log('user', user);
+      return user;
     } catch (error) {
+      console.log('Error', error);
       throw new NotFoundException('User does not exist');
     }
   }
 
   async searchUserName(searchTerm: string) {
     try {
-      return await this.userModel.find({
-        $or: [{ email: searchTerm }, { phone: searchTerm }],
+      const user = await this.userModel.find({
+        $or: [
+          { username: { $regex: searchTerm, $options: 'i' } },
+          { email: { $regex: searchTerm, $options: 'i' } },
+        ],
       });
+      console.log('searched user', user);
+      return user;
     } catch (error) {
       throw new Error(error);
     }

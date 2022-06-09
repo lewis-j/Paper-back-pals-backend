@@ -19,22 +19,22 @@ export class UserBooks {
 
   @Prop({ type: Schema.Types.ObjectId, ref: 'User', required: true })
   @Type(() => User)
-  @Transform(
-    (value) => {
-      if (Object.keys(value.value).length !== 0) return value.value;
-    },
-    { toClassOnly: true },
-  )
+  // @Transform(
+  //   (value) => {
+  //     if (Object.keys(value.value).length !== 0) return value.value;
+  //   },
+  //   { toClassOnly: true },
+  // )
   owner: User;
 
   @Prop({ type: Schema.Types.ObjectId, ref: 'User' })
   @Type(() => User)
-  @Transform(
-    (value) => {
-      if (Object.keys(value.value).length !== 0) return value.value;
-    },
-    { toClassOnly: true },
-  )
+  // @Transform(
+  //   (value) => {
+  //     if (Object.keys(value.value).length !== 0) return value.value;
+  //   },
+  //   { toClassOnly: true },
+  // )
   recipient: User;
 
   @Prop({ type: String, enum: status, default: status[0] })

@@ -29,17 +29,17 @@ export class UserBooksController {
     return this.userBooksService.createUserBook(user_id, userBook);
   }
 
-  @UseInterceptors(MongooseClassSerializerInterceptor(UserBooks))
-  @Get('owned')
-  getOwnedBooks(@Request() req: RequestWithUID) {
-    const { user_id } = req.user;
-    return this.userBooksService.getOWnedBooks(user_id);
-  }
+  // @UseInterceptors(MongooseClassSerializerInterceptor(UserBooks))
+  // @Get('owned')
+  // getOwnedBooks(@Request() req: RequestWithUID) {
+  //   const { user_id } = req.user;
+  //   return this.userBooksService.getOWnedBooks(user_id);
+  // }
 
-  @UseInterceptors(MongooseClassSerializerInterceptor(UserBooks))
-  @Get('borrowed')
-  getBorrowedBooks(@Request() req: RequestWithUID) {
-    const { user_id } = req.user;
-    return this.userBooksService.getBorrowedBooks(user_id);
-  }
+  // @UseInterceptors(MongooseClassSerializerInterceptor(UserBooks))
+  // @Get('borrowed')
+  // getBorrowedBooks(@Request() req: RequestWithUID) {
+  //   const { user_id } = req.user;
+  //   return this.userBooksService.getBorrowedBooks(user_id);
+  // }
 }

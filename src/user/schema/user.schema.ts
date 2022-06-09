@@ -93,11 +93,23 @@ UserSchema.virtual('ownedBooks', {
 });
 
 UserSchema.static('getAuthUser', async function (_id: string) {
-  return await this.findById(_id).populate(['friends', 'request_inbox']).exec();
+  return await this.findById(_id)
+    .populate([
+      'friends',
+      'friendRequestInbox',
+      { path: 'ownedBooks', populate: ['book', 'owner'] },
+      'borrowedBooks',
+    ])
+    .exec();
 });
 
 UserSchema.static('getFireUser', async function (firebase_id: string) {
   return await this.findOne({ firebase_id: firebase_id })
-    .populate(['friends', 'request_inbox', 'ownedBooks', 'borrowedBooks'])
+    .populate([
+      'friends',
+      'friendRequestInbox',
+      { path: 'ownedBooks', populate: ['book', 'owner'] },
+      'borrowedBooks',
+    ])
     .exec();
 });

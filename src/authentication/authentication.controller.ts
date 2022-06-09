@@ -37,7 +37,6 @@ export class AuthenticationController {
 
   @Get('token')
   getCsrfToken(@Request() req) {
-    console.log('CSRF');
     const token = req.csrfToken();
     return { csrfToken: token };
   }
@@ -57,14 +56,13 @@ export class AuthenticationController {
     return user;
   }
 
-  // @UseGuards(FirebaseAuthGuard)
+  @UseGuards(FirebaseAuthGuard)
   @UseInterceptors(MongooseClassSerializerInterceptor(User))
-  @Post('test')
+  @Post('google')
   async verifiedGoogleSignIn(
     @Request() req: RequestWithUser,
     @Response({ passthrough: true }) res: ResponseType,
   ) {
-    console.log('running google');
     const { user: firebaseUser } = req;
     const { user, statusCode } = await this.userService.upsertFireUser(
       firebaseUser,

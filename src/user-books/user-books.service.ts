@@ -26,23 +26,23 @@ export class UserBooksService {
     return newUserBook.populate(['book', 'owner']);
   }
 
-  async getOWnedBooks(user_id: string) {
-    const userId = new Types.ObjectId(user_id);
-    return await this.userBooksModel
-      .find({ owner: userId })
-      .populate(['book', 'recipient'])
-      .exec();
-  }
+  // async getOWnedBooks(user_id: string) {
+  //   const userId = new Types.ObjectId(user_id);
+  //   return await this.userBooksModel
+  //     .find({ owner: userId })
+  //     .populate(['book', 'recipient'])
+  //     .exec();
+  // }
 
-  async getBorrowedBooks(user_id: string) {
-    const userId = new Types.ObjectId(user_id);
-    try {
-      return await this.userBooksModel
-        .find({ recipient: userId })
-        .populate(['book', 'owner'])
-        .exec();
-    } catch (error) {
-      return Promise.reject(error);
-    }
-  }
+  // async getBorrowedBooks(user_id: string) {
+  //   const userId = new Types.ObjectId(user_id);
+  //   try {
+  //     return await this.userBooksModel
+  //       .find({ recipient: userId })
+  //       .populate(['book', 'owner'])
+  //       .exec();
+  //   } catch (error) {
+  //     return Promise.reject(error);
+  //   }
+  // }
 }

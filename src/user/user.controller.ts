@@ -11,14 +11,14 @@ import MongooseClassSerializerInterceptor from 'src/authentication/mongooseClass
 import { User } from './schema/user.schema';
 import { UserService } from './user.service';
 
-// @UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get('search?')
   @UseInterceptors(MongooseClassSerializerInterceptor(User))
-  async getUsersFromSearch(@Query('email') searchQuery: string) {
+  async getUsersFromSearch(@Query('user') searchQuery: string) {
     console.log('searchQuery', searchQuery);
     if (searchQuery) {
       const user = await this.userService.searchUserName(searchQuery);
@@ -29,7 +29,9 @@ export class UserController {
   @Get(':id')
   @UseInterceptors(MongooseClassSerializerInterceptor(User))
   async getUser(@Param('id') user_id: string) {
+    console.log('id in getUSer', user_id);
     const user = await this.userService.getOneUser(user_id);
+    console.log('user', user);
     return user;
   }
 }
