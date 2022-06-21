@@ -3,7 +3,7 @@ import {
   Schema as SchemaDecorator,
   SchemaFactory,
 } from '@nestjs/mongoose';
-import { Document, Schema } from 'mongoose';
+import { Document, Schema, Types } from 'mongoose';
 import { Exclude, Transform, Type } from 'class-transformer';
 import { UserBooks } from 'src/user-books/schema/userbooks.schema';
 import { FriendRequest } from 'src/friends/schema/friendRequest.schema';
@@ -17,7 +17,12 @@ export type UserDocument = User & Document;
   },
 })
 export class User {
-  @Transform(({ value }) => value.toString())
+  @Transform(
+    ({ obj }) => {
+      return obj._id.toString();
+    },
+    { toClassOnly: true },
+  )
   _id: string;
 
   @Prop({ unique: true, index: true })
@@ -56,7 +61,7 @@ export class User {
   friendRequestInbox: FriendRequest[];
 
   @Type(() => FriendRequest)
-  friendRequestSent: FriendRequest[];
+  friendRequestOutbox: FriendRequest[];
 
   @Prop({ immutable: true, default: () => Date.now() })
   @Exclude()
@@ -80,6 +85,12 @@ UserSchema.virtual('friendRequestInbox', {
   foreignField: 'reciever',
 });
 
+UserSchema.virtual('friendRequestOutbox', {
+  ref: 'FriendRequest',
+  localField: '_id',
+  foreignField: 'sender',
+});
+
 UserSchema.virtual('borrowedBooks', {
   ref: 'UserBooks',
   localField: '_id',
@@ -92,24 +103,36 @@ UserSchema.virtual('ownedBooks', {
   foreignField: 'owner',
 });
 
-UserSchema.static('getAuthUser', async function (_id: string) {
-  return await this.findById(_id)
+const populateUser = async (findFunc) => {
+  return await findFunc
     .populate([
-      'friends',
-      'friendRequestInbox',
-      { path: 'ownedBooks', populate: ['book', 'owner'] },
+      {
+        path: 'friends',
+        select: '_id, username profilePic',
+      },
+      {
+        path: 'friendRequestOutbox',
+        populate: { path: 'reciever', select: '_id username profilePic' },
+        select: 'reciever -sender',
+      },
+      {
+        path: 'friendRequestInbox',
+        populate: { path: 'sender', select: '_id username profilePic' },
+        select: 'sender -reciever',
+      },
+      {
+        path: 'ownedBooks',
+        populate: ['book', 'owner'],
+      },
       'borrowedBooks',
     ])
     .exec();
+};
+
+UserSchema.static('getAuthUser', async function (_id: string) {
+  return await populateUser(this.findById(_id));
 });
 
 UserSchema.static('getFireUser', async function (firebase_id: string) {
-  return await this.findOne({ firebase_id: firebase_id })
-    .populate([
-      'friends',
-      'friendRequestInbox',
-      { path: 'ownedBooks', populate: ['book', 'owner'] },
-      'borrowedBooks',
-    ])
-    .exec();
+  return await populateUser(this.findOne({ firebase_id: firebase_id }));
 });

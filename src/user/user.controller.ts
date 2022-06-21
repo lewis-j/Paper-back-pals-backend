@@ -19,7 +19,7 @@ export class UserController {
   @Get('search?')
   @UseInterceptors(MongooseClassSerializerInterceptor(User))
   async getUsersFromSearch(@Query('user') searchQuery: string) {
-    console.log('searchQuery', searchQuery);
+    console.log('query', searchQuery);
     if (searchQuery) {
       const user = await this.userService.searchUserName(searchQuery);
       return user;

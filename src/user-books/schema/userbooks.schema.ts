@@ -13,6 +13,14 @@ export type UserBooksDocument = UserBooks & Document;
 
 @SchemaDecorator()
 export class UserBooks {
+  @Transform(
+    ({ obj }) => {
+      return obj._id.toString();
+    },
+    { toClassOnly: true },
+  )
+  _id: string;
+
   @Prop({ type: Schema.Types.ObjectId, ref: 'Books', required: true })
   @Type(() => Books)
   book: Books;

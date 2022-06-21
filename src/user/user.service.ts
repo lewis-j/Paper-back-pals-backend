@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, ClientSession } from 'mongoose';
 import { FriendRequest } from 'src/friends/schema/friendRequest.schema';
@@ -83,32 +87,21 @@ export class UserService {
   // }
 
   async getOneUser(_id: string) {
-    try {
-      const user = await this.userModel
-        .findById(_id)
-        .populate('friends')
-        .exec();
-      console.log('user', user);
-      return user;
-    } catch (error) {
-      console.log('Error', error);
-      throw new NotFoundException('User does not exist');
-    }
+    const user = await this.userModel.findById(_id).populate('friends').exec();
+    console.log('user', user);
+
+    if (!user) throw new NotFoundException('User does not exist');
+    return user;
   }
 
   async searchUserName(searchTerm: string) {
-    try {
-      const user = await this.userModel.find({
-        $or: [
-          { username: { $regex: searchTerm, $options: 'i' } },
-          { email: { $regex: searchTerm, $options: 'i' } },
-        ],
-      });
-      console.log('searched user', user);
-      return user;
-    } catch (error) {
-      throw new Error(error);
-    }
+    const user = await this.userModel.find({
+      $or: [
+        { username: { $regex: searchTerm, $options: 'i' } },
+        { email: { $regex: searchTerm, $options: 'i' } },
+      ],
+    });
+    return user;
   }
 
   async addFriendFromRequest(
