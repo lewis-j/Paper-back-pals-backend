@@ -96,6 +96,12 @@ UserSchema.virtual('borrowedBooks', {
   localField: '_id',
   foreignField: 'recipient',
 });
+// UserSchema.virtual('borrowedBooks', {
+//   ref: 'BookRequest',
+//   localField: '_id',
+//   foreignField: 'requester',
+//     match: { checkedIn: false}
+// });
 
 UserSchema.virtual('ownedBooks', {
   ref: 'UserBooks',

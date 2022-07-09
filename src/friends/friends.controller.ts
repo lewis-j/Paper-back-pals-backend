@@ -20,10 +20,12 @@ export class FriendsController {
   constructor(private readonly friendsService: FriendsService) {}
 
   @Post('add/:id')
-  addFriend(@Param('id') request_id: string, @Req() req: RequestWithUID) {
-    console.log('request_id================', request_id);
+  async addFriend(
+    @Param('id') friendRequest_id: string,
+    @Req() req: RequestWithUID,
+  ) {
     const { user_id } = req.user;
-    this.friendsService.addFriend(request_id, user_id);
+    return await this.friendsService.addFriend(friendRequest_id, user_id);
   }
   @Post('request/:id')
   async makeRequest(
@@ -37,5 +39,9 @@ export class FriendsController {
       console.log('error in post friend request', error.message);
       throw new HttpException(error.message, HttpStatus.CONFLICT);
     }
+  }
+  @Post('user/:id')
+  async getUserData(@Param('id') user_id: string) {
+    return await this.friendsService.getUserData(user_id);
   }
 }

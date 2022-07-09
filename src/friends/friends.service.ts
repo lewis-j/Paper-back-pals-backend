@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model, Types } from 'mongoose';
+import { async } from 'rxjs';
 import { UserService } from 'src/user/user.service';
 import {
   FriendRequest,
@@ -21,7 +22,7 @@ export class FriendsService {
     private readonly usersService: UserService,
   ) {}
 
-  async createRequest(user_id: string, reciever_id: string) {
+  public createRequest = async (user_id: string, reciever_id: string) => {
     const userAsObjectId = new Types.ObjectId(user_id);
     const recieverAsObjectId = new Types.ObjectId(reciever_id);
 
@@ -42,26 +43,39 @@ export class FriendsService {
       console.log('Error:::', error);
       return Promise.reject(error);
     }
-  }
+  };
 
   public removeRequest = async (request_id: string) => {
     return await this.friendRequest.remove(request_id);
   };
 
   public addFriend = async (request_id: string, user_id: string) => {
-    const session = await this.connection.startSession();
     const request = await this.friendRequest.findById(request_id);
     if (!request) throw new NotFoundException('request does not exist!');
-    const { reciever } = request;
+    const { reciever, sender } = request;
 
     if (reciever.toString().localeCompare(user_id))
       throw new UnauthorizedException('Wrong user attempt');
+    try {
+      const session = await this.connection.startSession();
+      await session.withTransaction(async () => {
+        await request.remove({ session: session });
+        await this.usersService.addFriendFromRequest(request, session);
+        return sender;
+      });
+      session.endSession();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  };
 
-    await session.withTransaction(async () => {
-      await request.remove({ session: session });
-      await this.usersService.addFriendFromRequest(request, session);
-    });
-
-    session.endSession();
+  public getUserData = async (user_id: string) => {
+    try {
+      const user = await this.usersService.getAuthUserById(user_id);
+      if (!user) throw new NotFoundException();
+      return user;
+    } catch (error) {
+      return error;
+    }
   };
 }
