@@ -68,14 +68,4 @@ export class FriendsService {
       return Promise.reject(error);
     }
   };
-
-  public getUserData = async (user_id: string) => {
-    try {
-      const user = await this.usersService.getAuthUserById(user_id);
-      if (!user) throw new NotFoundException();
-      return user;
-    } catch (error) {
-      return error;
-    }
-  };
 }

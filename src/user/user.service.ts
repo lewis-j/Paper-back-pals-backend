@@ -87,7 +87,7 @@ export class UserService {
   // }
 
   async getOneUser(_id: string) {
-    const user = await this.userModel.findById(_id).populate('friends').exec();
+    const user = await this.userModel.getUser(_id);
     console.log('user', user);
 
     if (!user) throw new NotFoundException('User does not exist');

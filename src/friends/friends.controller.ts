@@ -40,8 +40,4 @@ export class FriendsController {
       throw new HttpException(error.message, HttpStatus.CONFLICT);
     }
   }
-  @Post('user/:id')
-  async getUserData(@Param('id') user_id: string) {
-    return await this.friendsService.getUserData(user_id);
-  }
 }

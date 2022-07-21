@@ -135,10 +135,26 @@ const populateUser = async (findFunc) => {
     .exec();
 };
 
-UserSchema.static('getAuthUser', async function (_id: string) {
-  return await populateUser(this.findById(_id));
+UserSchema.static('getAuthUser', async function (user_id: string) {
+  return await populateUser(this.findById(user_id));
 });
 
 UserSchema.static('getFireUser', async function (firebase_id: string) {
   return await populateUser(this.findOne({ firebase_id: firebase_id }));
+});
+
+UserSchema.static('getUser', async function (user_id: string) {
+  return await this.findById({ _id: user_id })
+    .populate([
+      {
+        path: 'friends',
+        select: '_id, username profilePic',
+      },
+      {
+        path: 'ownedBooks',
+        populate: ['book', 'owner'],
+      },
+      'borrowedBooks',
+    ])
+    .exec();
 });

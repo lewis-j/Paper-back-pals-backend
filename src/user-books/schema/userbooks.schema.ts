@@ -45,9 +45,6 @@ export class UserBooks {
   // )
   recipient: User;
 
-  @Prop({ type: String, enum: status, default: status[0] })
-  status: string;
-
   @Prop({ type: Date, default: () => Date.now() })
   @Exclude()
   updatedAt: Date;
