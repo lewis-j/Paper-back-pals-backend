@@ -9,6 +9,7 @@ import { BooksModule } from './books/books.module';
 import { UserBooksModule } from './user-books/user-books.module';
 import { AuthenticationModule } from './authentication/authentication.module';
 import { FriendsModule } from './friends/friends.module';
+import { BookRequestModule } from './book-request/book-request.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { FriendsModule } from './friends/friends.module';
     UserBooksModule,
     AuthenticationModule,
     FriendsModule,
+    BookRequestModule,
   ],
   controllers: [AppController],
   providers: [AppService, FirebaseAuthStrategy],
