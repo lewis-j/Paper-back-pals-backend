@@ -148,7 +148,7 @@ UserSchema.static('getUser', async function (user_id: string) {
     .populate([
       {
         path: 'friends',
-        select: '_id, username profilePic',
+        select: '_id username profilePic',
       },
       {
         path: 'ownedBooks',
