@@ -152,7 +152,7 @@ UserSchema.static('getUser', async function (user_id: string) {
       },
       {
         path: 'ownedBooks',
-        populate: ['book', 'owner'],
+        populate: ['book', 'owner', { path: 'request', select: '_id' }],
       },
       'borrowedBooks',
     ])

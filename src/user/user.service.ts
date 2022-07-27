@@ -20,7 +20,6 @@ export class UserService {
   ) {}
 
   async upsertFireUser(firebaseUser: GoogleUserDto) {
-    console.log('firebase_user', firebaseUser);
     const { firebase_id: id } = firebaseUser;
     try {
       const existingUser = await this.userModel.getFireUser(id);
@@ -88,7 +87,6 @@ export class UserService {
 
   async getOneUser(_id: string) {
     const user = await this.userModel.getUser(_id);
-    console.log('user', user);
 
     if (!user) throw new NotFoundException('User does not exist');
     return user;
@@ -117,6 +115,6 @@ export class UserService {
     _reciever.friends.push(sender);
     _sender.friends.push(reciever);
     await _reciever.save();
-    await _sender.save();
+    return await _sender.save();
   }
 }

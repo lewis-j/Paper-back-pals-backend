@@ -25,13 +25,19 @@ export class FriendsController {
     @Req() req: RequestWithUID,
   ) {
     const { user_id } = req.user;
-    return await this.friendsService.addFriend(friendRequest_id, user_id);
+    const { _id, profilePic, username } = await this.friendsService.addFriend(
+      friendRequest_id,
+      user_id,
+    );
+    return { _id, profilePic, username };
   }
   @Post('request/:id')
   async makeRequest(
     @Param('id') reciever_id: string,
     @Req() req: RequestWithUID,
   ) {
+    console.log('reciever_id', reciever_id);
+
     const { user_id } = req.user;
     try {
       await this.friendsService.createRequest(user_id, reciever_id);

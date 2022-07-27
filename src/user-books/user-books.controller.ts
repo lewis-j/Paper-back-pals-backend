@@ -14,6 +14,7 @@ import { UserBooksService } from './user-books.service';
 import RequestWithUID from 'src/authentication/requestWithUID.interface';
 import MongooseClassSerializerInterceptor from 'src/authentication/mongooseClassSerializer.interceptor';
 import { UserBooks } from './schema/userbooks.schema';
+import { BookRequest } from 'src/book-request/schema/bookRequest.schema';
 
 @UseGuards(JwtAuthGuard)
 @Controller('user-books')
@@ -28,18 +29,16 @@ export class UserBooksController {
     const { user_id } = req.user;
     return this.userBooksService.createUserBook(user_id, userBook);
   }
-
-  // @UseInterceptors(MongooseClassSerializerInterceptor(UserBooks))
-  // @Get('owned')
-  // getOwnedBooks(@Request() req: RequestWithUID) {
-  //   const { user_id } = req.user;
-  //   return this.userBooksService.getOWnedBooks(user_id);
-  // }
-
-  // @UseInterceptors(MongooseClassSerializerInterceptor(UserBooks))
-  // @Get('borrowed')
-  // getBorrowedBooks(@Request() req: RequestWithUID) {
-  //   const { user_id } = req.user;
-  //   return this.userBooksService.getBorrowedBooks(user_id);
-  // }
+  @Post('create-request')
+  async createBookRequest(@Request() req: RequestWithUID, @Body() body: any) {
+    const { user_id } = req.user;
+    const { userBook_id } = body;
+    console.log('userBook_id', userBook_id, user_id);
+    const userBook = await this.userBooksService.createBookRequest(
+      user_id,
+      userBook_id,
+    );
+    console.log('userBook', userBook);
+    return userBook;
+  }
 }

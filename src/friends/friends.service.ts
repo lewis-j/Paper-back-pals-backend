@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model, Types } from 'mongoose';
-import { async } from 'rxjs';
 import { UserService } from 'src/user/user.service';
 import {
   FriendRequest,
@@ -31,8 +30,6 @@ export class FriendsService {
         sender: userAsObjectId,
         reciever: recieverAsObjectId,
       });
-      console.log('sender:', userAsObjectId, 'reciever', reciever_id);
-      console.log('Does request exist?', result);
       if (result) throw Error('Request already exist');
 
       return await this.friendRequest.create({
@@ -58,14 +55,24 @@ export class FriendsService {
       throw new UnauthorizedException('Wrong user attempt');
     try {
       const session = await this.connection.startSession();
-      await session.withTransaction(async () => {
+      const newFriend = await this.withTransaction(session, async () => {
         await request.remove({ session: session });
-        await this.usersService.addFriendFromRequest(request, session);
-        return sender;
+        return await this.usersService.addFriendFromRequest(request, session);
       });
       session.endSession();
+      return newFriend;
     } catch (error) {
       return Promise.reject(error);
     }
+  };
+
+  //https://jira.mongodb.org/browse/NODE-2014
+  private withTransaction = async (session, closure) => {
+    let result;
+    await session.withTransaction(() => {
+      result = closure();
+      return result;
+    });
+    return result;
   };
 }
