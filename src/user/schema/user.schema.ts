@@ -7,6 +7,8 @@ import { Document, Schema, Types } from 'mongoose';
 import { Exclude, Transform, Type } from 'class-transformer';
 import { UserBooks } from 'src/user-books/schema/userbooks.schema';
 import { FriendRequest } from 'src/friends/schema/friendRequest.schema';
+import { BookRequest } from 'src/book-request/schema/bookRequest.schema';
+import { status } from '../../book-request/schema/status';
 
 export type UserDocument = User & Document;
 
@@ -51,6 +53,9 @@ export class User {
   @Type(() => UserBooks)
   ownedBooks: UserBooks[];
 
+  @Type(() => BookRequest)
+  bookRequest: UserBooks[];
+
   @Prop({
     type: [{ type: Schema.Types.ObjectId, ref: 'User', default: null }],
   })
@@ -91,22 +96,27 @@ UserSchema.virtual('friendRequestOutbox', {
   foreignField: 'sender',
 });
 
-UserSchema.virtual('borrowedBooks', {
-  ref: 'UserBooks',
-  localField: '_id',
-  foreignField: 'recipient',
-});
 // UserSchema.virtual('borrowedBooks', {
-//   ref: 'BookRequest',
+//   ref: 'UserBooks',
 //   localField: '_id',
-//   foreignField: 'requester',
-//     match: { checkedIn: false}
+//   foreignField: 'recipient',
 // });
+UserSchema.virtual('borrowedBooks', {
+  ref: 'BookRequest',
+  localField: '_id',
+  foreignField: 'requester',
+  match: { status: status[3] },
+});
 
 UserSchema.virtual('ownedBooks', {
   ref: 'UserBooks',
   localField: '_id',
   foreignField: 'owner',
+});
+UserSchema.virtual('bookRequest', {
+  ref: 'BookRequest',
+  localField: '_id',
+  foreignField: 'requester',
 });
 
 const populateUser = async (findFunc) => {
@@ -125,6 +135,10 @@ const populateUser = async (findFunc) => {
         path: 'friendRequestInbox',
         populate: { path: 'sender', select: '_id username profilePic' },
         select: 'sender -reciever',
+      },
+      {
+        path: 'bookRequest',
+        populate: [{ path: 'userBook', select: '_id' }],
       },
       {
         path: 'ownedBooks',

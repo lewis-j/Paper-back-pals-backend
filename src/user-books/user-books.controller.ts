@@ -33,12 +33,10 @@ export class UserBooksController {
   async createBookRequest(@Request() req: RequestWithUID, @Body() body: any) {
     const { user_id } = req.user;
     const { userBook_id } = body;
-    console.log('userBook_id', userBook_id, user_id);
     const userBook = await this.userBooksService.createBookRequest(
       user_id,
       userBook_id,
     );
-    console.log('userBook', userBook);
     return userBook;
   }
 }

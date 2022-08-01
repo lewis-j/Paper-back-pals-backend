@@ -27,7 +27,7 @@ export class AuthenticationController {
   ) {}
 
   @UseGuards(JwtAuthGuard)
-  // @UseInterceptors(MongooseClassSerializerInterceptor(User))
+  @UseInterceptors(MongooseClassSerializerInterceptor(User))
   @Get()
   async fetchUser(@Request() req: RequestWithUID) {
     const { user_id } = req.user;
