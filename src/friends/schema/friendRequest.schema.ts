@@ -6,7 +6,7 @@ import { status } from './friend-request-status';
 
 export type FriendRequestsDocument = FriendRequest & mongoose.Document;
 
-@Schema()
+@Schema({ timestamps: true })
 export class FriendRequest {
   @Transform(
     ({ obj }) => {
@@ -21,7 +21,7 @@ export class FriendRequest {
   sender: User;
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true })
   @Type(() => User)
-  reciever: User;
+  recipient: User;
   @Prop({ type: String, enum: status, default: status[0] })
   status: string;
 }

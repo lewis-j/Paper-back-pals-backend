@@ -33,14 +33,14 @@ export class FriendsController {
   }
   @Post('request/:id')
   async makeRequest(
-    @Param('id') reciever_id: string,
+    @Param('id') recipient_id: string,
     @Req() req: RequestWithUID,
   ) {
-    console.log('reciever_id', reciever_id);
+    console.log('recipient_id', recipient_id);
 
     const { user_id } = req.user;
     try {
-      await this.friendsService.createRequest(user_id, reciever_id);
+      await this.friendsService.createRequest(user_id, recipient_id);
     } catch (error) {
       console.log('error in post friend request', error.message);
       throw new HttpException(error.message, HttpStatus.CONFLICT);

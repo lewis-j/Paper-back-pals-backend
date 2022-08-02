@@ -21,20 +21,20 @@ export class FriendsService {
     private readonly usersService: UserService,
   ) {}
 
-  public createRequest = async (user_id: string, reciever_id: string) => {
+  public createRequest = async (user_id: string, recipient_id: string) => {
     const userAsObjectId = new Types.ObjectId(user_id);
-    const recieverAsObjectId = new Types.ObjectId(reciever_id);
+    const recipientAsObjectId = new Types.ObjectId(recipient_id);
 
     try {
       const result = await this.friendRequest.findOne({
         sender: userAsObjectId,
-        reciever: recieverAsObjectId,
+        recipient: recipientAsObjectId,
       });
       if (result) throw Error('Request already exist');
 
       return await this.friendRequest.create({
         sender: userAsObjectId,
-        reciever: recieverAsObjectId,
+        recipient: recipientAsObjectId,
       });
     } catch (error) {
       console.log('Error:::', error);
@@ -49,9 +49,9 @@ export class FriendsService {
   public addFriend = async (request_id: string, user_id: string) => {
     const request = await this.friendRequest.findById(request_id);
     if (!request) throw new NotFoundException('request does not exist!');
-    const { reciever, sender } = request;
+    const { recipient, sender } = request;
 
-    if (reciever.toString().localeCompare(user_id))
+    if (recipient.toString().localeCompare(user_id))
       throw new UnauthorizedException('Wrong user attempt');
     try {
       const session = await this.connection.startSession();

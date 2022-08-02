@@ -9,10 +9,12 @@ import { UserBooks } from 'src/user-books/schema/userbooks.schema';
 import { FriendRequest } from 'src/friends/schema/friendRequest.schema';
 import { BookRequest } from 'src/book-request/schema/bookRequest.schema';
 import { status } from '../../book-request/schema/status';
+import { Notifications } from 'src/notifications/schema/Notifications.schema';
 
 export type UserDocument = User & Document;
 
 @SchemaDecorator({
+  timestamps: true,
   toJSON: {
     getters: true,
     virtuals: true,
@@ -67,27 +69,18 @@ export class User {
 
   @Type(() => FriendRequest)
   friendRequestOutbox: FriendRequest[];
-
-  @Prop({ immutable: true, default: () => Date.now() })
-  @Exclude()
-  createdAt: Date;
-
-  @Prop({ default: () => Date.now() })
-  @Exclude()
-  updatedAt: Date;
+  @Type(() => Notifications)
+  notifications: Notifications[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
 UserSchema.index({ email: 'text' });
 
-UserSchema.pre<UserDocument>('save', function () {
-  this.updatedAt = new Date();
-});
 UserSchema.virtual('friendRequestInbox', {
   ref: 'FriendRequest',
   localField: '_id',
-  foreignField: 'reciever',
+  foreignField: 'recipient',
 });
 
 UserSchema.virtual('friendRequestOutbox', {
@@ -96,16 +89,11 @@ UserSchema.virtual('friendRequestOutbox', {
   foreignField: 'sender',
 });
 
-// UserSchema.virtual('borrowedBooks', {
-//   ref: 'UserBooks',
-//   localField: '_id',
-//   foreignField: 'recipient',
-// });
 UserSchema.virtual('borrowedBooks', {
   ref: 'BookRequest',
   localField: '_id',
-  foreignField: 'requester',
-  match: { status: status[3] },
+  foreignField: 'sender',
+  match: { status: 'CHECKED_OUT' },
 });
 
 UserSchema.virtual('ownedBooks', {
@@ -116,7 +104,12 @@ UserSchema.virtual('ownedBooks', {
 UserSchema.virtual('bookRequest', {
   ref: 'BookRequest',
   localField: '_id',
-  foreignField: 'requester',
+  foreignField: 'sender',
+});
+UserSchema.virtual('notifications', {
+  ref: 'Notifications',
+  localField: '_id',
+  foreignField: 'user',
 });
 
 const populateUser = async (findFunc) => {
@@ -128,13 +121,13 @@ const populateUser = async (findFunc) => {
       },
       {
         path: 'friendRequestOutbox',
-        populate: { path: 'reciever', select: '_id username profilePic' },
-        select: 'reciever -sender',
+        populate: { path: 'recipient', select: '_id username profilePic' },
+        select: 'recipient -sender',
       },
       {
         path: 'friendRequestInbox',
         populate: { path: 'sender', select: '_id username profilePic' },
-        select: 'sender -reciever',
+        select: 'sender -recipient',
       },
       {
         path: 'bookRequest',
@@ -145,6 +138,7 @@ const populateUser = async (findFunc) => {
         populate: ['book', 'owner'],
       },
       'borrowedBooks',
+      'notifications',
     ])
     .exec();
 };

@@ -13,8 +13,6 @@ import { JwtAuthGuard } from 'src/authentication/jwt-auth-guard';
 import { UserBooksService } from './user-books.service';
 import RequestWithUID from 'src/authentication/requestWithUID.interface';
 import MongooseClassSerializerInterceptor from 'src/authentication/mongooseClassSerializer.interceptor';
-import { UserBooks } from './schema/userbooks.schema';
-import { BookRequest } from 'src/book-request/schema/bookRequest.schema';
 
 @UseGuards(JwtAuthGuard)
 @Controller('user-books')

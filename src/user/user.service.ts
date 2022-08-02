@@ -106,15 +106,17 @@ export class UserService {
     request: FriendRequest,
     session: ClientSession | null = null,
   ) {
-    const { sender, reciever } = request;
+    const { sender, recipient } = request;
 
-    const _reciever = await this.userModel.findById(reciever).session(session);
+    const _recipient = await this.userModel
+      .findById(recipient)
+      .session(session);
     const _sender = await this.userModel.findById(sender).session(session);
-    if (!(_reciever && _sender))
+    if (!(_recipient && _sender))
       throw new NotFoundException('user does not exist!');
-    _reciever.friends.push(sender);
-    _sender.friends.push(reciever);
-    await _reciever.save();
+    _recipient.friends.push(sender);
+    _sender.friends.push(recipient);
+    await _recipient.save();
     return await _sender.save();
   }
 }

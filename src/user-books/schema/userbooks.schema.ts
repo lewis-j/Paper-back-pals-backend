@@ -11,7 +11,7 @@ import { BookRequest } from 'src/book-request/schema/bookRequest.schema';
 
 export type UserBooksDocument = UserBooks & Document;
 
-@SchemaDecorator()
+@SchemaDecorator({ timestamps: true })
 export class UserBooks {
   @Transform(
     ({ obj }) => {
@@ -52,18 +52,6 @@ export class UserBooks {
   @Prop({ type: Schema.Types.ObjectId, ref: 'BookRequest', default: null })
   @Type(() => BookRequest)
   currentRequest: BookRequest;
-
-  @Prop({ type: Date, default: () => Date.now() })
-  @Exclude()
-  updatedAt: Date;
-
-  @Prop({ type: Date, immutable: true, default: () => Date.now() })
-  @Exclude()
-  createdAt: Date;
 }
 
 export const UserBooksSchema = SchemaFactory.createForClass(UserBooks);
-
-UserBooksSchema.pre<UserBooksDocument>('save', function () {
-  this.updatedAt = new Date();
-});
