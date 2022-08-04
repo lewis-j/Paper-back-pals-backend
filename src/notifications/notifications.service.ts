@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model, Types } from 'mongoose';
+import mongoose, { ClientSession, Model, Types } from 'mongoose';
 import { CreateNotificationDto } from './dto/CreateNotificationDto';
 import CreateNotifications from './dto/CreateNotifications.interface';
 
@@ -14,9 +14,11 @@ export class NotificationsService {
   constructor(
     @InjectModel(Notifications.name)
     private readonly notificationsModel: Model<NotificationsDocument>,
-    @InjectConnection() private readonly connection: mongoose.Connection,
   ) {}
-  public async createNotification(notificationsData: CreateNotifications) {
+  public async createNotification(
+    notificationsData: CreateNotifications,
+    session: ClientSession,
+  ) {
     const {
       sender_id,
       recipient_id,
@@ -26,7 +28,6 @@ export class NotificationsService {
     const senderAsObjectId = new Types.ObjectId(sender_id);
     const recipientAsObjectId = new Types.ObjectId(recipient_id);
 
-    const session = await this.connection.startSession();
     const notificationObj = {
       ...requestData,
       user: recipientAsObjectId,
@@ -34,40 +35,30 @@ export class NotificationsService {
     };
     console.log('notificationObj', notificationObj);
 
-    const createNotifications = async () => {
-      try {
-        await this.notificationsModel.create(
-          [
-            {
-              ...requestData,
-              user: recipientAsObjectId,
-              message: messages.recipient,
-            },
-          ],
-          { session: session },
-        );
-        return await this.notificationsModel.create(
-          [
-            {
-              ...requestData,
-              user: senderAsObjectId,
-              message: messages.sender,
-            },
-          ],
-          { session: session },
-        );
-      } catch (error) {
-        return Promise.reject(error);
-      }
-    };
-    const senderNotification = await this.withTransaction(
-      session,
-      createNotifications,
-    );
-
-    session.endSession();
-
-    return senderNotification;
+    try {
+      await this.notificationsModel.create(
+        [
+          {
+            ...requestData,
+            user: recipientAsObjectId,
+            message: messages.recipient,
+          },
+        ],
+        { session: session },
+      );
+      return await this.notificationsModel.create(
+        [
+          {
+            ...requestData,
+            user: senderAsObjectId,
+            message: messages.sender,
+          },
+        ],
+        { session: session },
+      );
+    } catch (error) {
+      return Promise.reject(error);
+    }
   }
 
   public async getOneNotification(notification_id: string) {
@@ -84,13 +75,4 @@ export class NotificationsService {
 
     return notificationDocs.populate('schemaRef');
   }
-  //https://jira.mongodb.org/browse/NODE-2014
-  private withTransaction = async (session, closure) => {
-    let result;
-    await session.withTransaction(() => {
-      result = closure();
-      return result;
-    });
-    return result;
-  };
 }

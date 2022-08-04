@@ -1,4 +1,4 @@
-enum requestTypeEnum {
+export enum requestTypeEnum {
   BookRequest = 'BookRequest',
   FriendRequest = 'FriendRequest',
 }

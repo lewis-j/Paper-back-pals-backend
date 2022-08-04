@@ -10,14 +10,14 @@ export class BookRequestService {
     private readonly bookRequestModel: Model<BookRequestDocument>,
   ) {}
 
-  async createNewRequest(sender_id: string, userBook_id: string) {
+  async createNewRequest(sender_id: string, userBook_id: string, session) {
     const senderAsObjectId = new Types.ObjectId(sender_id);
     const userBookAsObjectId = new Types.ObjectId(userBook_id);
     const newBookRequest = new this.bookRequestModel({
       sender: senderAsObjectId,
       userBook: userBookAsObjectId,
     });
-    return newBookRequest.save();
+    return newBookRequest.save({ session });
   }
 
   async doesRequestExist(user_id: string, userBook_id: string) {

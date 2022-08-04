@@ -39,18 +39,19 @@ export class NotificationsController {
     @Request() req: RequestWithUID,
     @Body() notificationDto: CreateNotificationDto,
   ) {
-    console.log('notificationDto', notificationDto);
-    console.log('req.user', req.user);
-    const { user_id: sender_id } = req.user;
-    console.log('recipient_id', recipient_id);
+    // console.log('notificationDto', notificationDto);
+    // console.log('req.user', req.user);
+    // const { user_id: sender_id } = req.user;
+    // console.log('recipient_id', recipient_id);
 
-    const newNot = await this.notificationServices.createNotification({
-      sender_id,
-      recipient_id,
-      notificationPayload: notificationDto,
-    });
-    console.log('newNot', newNot);
+    // const newNot = await this.notificationServices.createNotification({
+    //   sender_id,
+    //   recipient_id,
+    //   notificationPayload: notificationDto,
+    // });
+    // console.log('newNot', newNot);
 
-    return newNot;
+    // return newNot;
+    return null;
   }
 }
