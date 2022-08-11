@@ -7,8 +7,7 @@ import { Document, Schema, Types } from 'mongoose';
 import { Exclude, Transform, Type } from 'class-transformer';
 import { UserBooks } from 'src/user-books/schema/userbooks.schema';
 import { FriendRequest } from 'src/friends/schema/friendRequest.schema';
-import { BookRequest } from 'src/book-request/schema/bookRequest.schema';
-import { status } from '../../book-request/schema/status';
+import { BookRequest } from 'src/user-books/schema/bookRequest.schema';
 import { Notifications } from 'src/notifications/schema/Notifications.schema';
 
 export type UserDocument = User & Document;

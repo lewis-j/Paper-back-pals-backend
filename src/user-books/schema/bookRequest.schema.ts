@@ -7,7 +7,7 @@ import { Document, Schema } from 'mongoose';
 import { UserBooks } from 'src/user-books/schema/userbooks.schema';
 import { User } from 'src/user/schema/user.schema';
 import { Transform, Type } from 'class-transformer';
-import { status } from './status';
+import { status } from './status-enums';
 
 export type BookRequestDocument = BookRequest & Document;
 

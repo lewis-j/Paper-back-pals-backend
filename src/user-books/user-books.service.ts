@@ -1,20 +1,26 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Model, Types, Connection } from 'mongoose';
 import { UserBooks, UserBooksDocument } from './schema/userbooks.schema';
 import { BooksService } from 'src/books/books.service';
 import { createBookDto } from 'src/books/dto/createBookDto';
-import { BookRequestService } from 'src/book-request/book-request.service';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { requestTypeEnum } from 'src/notifications/dto/CreateNotificationDto';
+import { BookRequest, BookRequestDocument } from './schema/bookRequest.schema';
+import { status as bookRequestStatus } from './schema/status-enums';
 
 @Injectable()
 export class UserBooksService {
   constructor(
     @InjectModel(UserBooks.name)
     private readonly userBooksModel: Model<UserBooksDocument>,
+    @InjectModel(BookRequest.name)
+    private readonly bookRequestModel: Model<BookRequestDocument>,
     private bookService: BooksService,
-    private bookRequestService: BookRequestService,
     private notificationsService: NotificationsService,
     @InjectConnection() private connection: Connection,
   ) {}
@@ -33,14 +39,31 @@ export class UserBooksService {
   }
 
   async getBookRequest(request_id: string) {
-    return this.bookRequestService.getBookRequest(request_id);
+    return this.bookRequestModel.findById(request_id, null, {
+      populate: { path: 'userBook', populate: 'book' },
+    });
+  }
+
+  async doesRequestExist(user_id: string, userBook_id: string) {
+    const isExistingUser = await this.bookRequestModel.findOne({
+      $and: [{ sender: user_id }, { userBook: userBook_id }],
+    });
+    console.log('isExistingUser', isExistingUser);
+    return isExistingUser;
+  }
+
+  async createNewRequest(sender_id: string, userBook_id: string, session) {
+    const senderAsObjectId = new Types.ObjectId(sender_id);
+    const userBookAsObjectId = new Types.ObjectId(userBook_id);
+    const newBookRequest = new this.bookRequestModel({
+      sender: senderAsObjectId,
+      userBook: userBookAsObjectId,
+    });
+    return newBookRequest.save({ session });
   }
 
   async createBookRequest(user_id: string, userBook_id: string) {
-    const user = await this.bookRequestService.doesRequestExist(
-      user_id,
-      userBook_id,
-    );
+    const user = await this.doesRequestExist(user_id, userBook_id);
     if (user) {
       throw new ConflictException(`book request from user: ${user_id} exist!`);
     }
@@ -48,7 +71,7 @@ export class UserBooksService {
     const session = await this.connection.startSession();
 
     const result = await this.withTransaction(session, async (_session) => {
-      const newBookRequest = await this.bookRequestService.createNewRequest(
+      const newBookRequest = await this.createNewRequest(
         user_id,
         userBook_id,
         _session,
@@ -100,10 +123,104 @@ export class UserBooksService {
     return result;
   }
 
+  async nextRequestStatus(request_id: string, user_id: string) {
+    const bookRequest = await this.bookRequestModel.findById(request_id);
+    if (!bookRequest) throw new NotFoundException('The request does not exist');
+    const session = await this.connection.startSession();
+    const _statusEnum = Object.values(bookRequestStatus);
+    const idx = _statusEnum.findIndex(
+      (status) => status === bookRequest.status,
+    );
+
+    console.log('bookRequest', bookRequest);
+
+    bookRequest.status = _statusEnum[idx + 1];
+    return this.withTransaction(session, async (_session) => {
+      // const _bookRequest = await bookRequest.save({ session: _session });
+      const notificationPayload = await this.getPayloadFromBookRequest(
+        bookRequest,
+      );
+
+      console.log('notificationPayload:', notificationPayload);
+
+      // const newNotification =
+      //   await this.notificationsService.createNotification(
+      //     notificationPayload,
+      //     _session,
+      //   );
+      // return newNotification;
+    });
+  }
+
+  private async getPayloadFromBookRequest(bookRequest: BookRequestDocument) {
+    await bookRequest.populate({
+      path: 'userBook',
+      populate: { path: 'book', select: 'title' },
+      select: 'book owner',
+    });
+    console.log('populated bookRequest', bookRequest);
+    const { userBook } = bookRequest;
+    const requestPayload = {
+      requestType: requestTypeEnum['BookRequest'],
+      requestRef: bookRequest._id,
+    };
+    const defaultPayload = {
+      sender: {
+        _id: bookRequest.sender,
+      },
+      recipient: {
+        _id: userBook.owner,
+      },
+    };
+    console.log('bookRequest.status:', bookRequest.status);
+
+    const [sender, recipient] = this.getUserBookNotificationPayload(
+      bookRequest.status,
+      userBook.book.title,
+    );
+
+    console.log('sender:', sender);
+    console.log('recipient:', recipient);
+
+    return {
+      requestPayload,
+      sender: { ...defaultPayload.sender, ...sender },
+      recipient: {
+        ...defaultPayload.recipient,
+        ...recipient,
+      },
+    };
+  }
+
+  private getUserBookNotificationPayload(status, title) {
+    return {
+      [bookRequestStatus.ACCEPTED]: [
+        {
+          message: `Your book request for "${title}" was accepted!`,
+          actionRequired: true,
+        },
+        {
+          message: `You accepted a book request for "${title}"!`,
+          actionRequired: false,
+        },
+      ],
+      [bookRequestStatus.SENDING]: [
+        {
+          message: `"${title}" is on its way! Waiting for drop off!`,
+          actionRequired: false,
+        },
+        {
+          message: `Confirm drop off of your book "${title}!"`,
+          actionRequired: true,
+        },
+      ],
+    }[status];
+  }
+
   private async withTransaction(session, closure) {
     let result;
-    await session.withTransaction(() => {
-      result = closure(session);
+    await session.withTransaction(async () => {
+      result = await closure(session);
       return result;
     });
     return result;

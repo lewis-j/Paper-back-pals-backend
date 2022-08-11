@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Request,
   UseGuards,
   UseInterceptors,
@@ -38,5 +39,13 @@ export class UserBooksController {
     const { request_id, notification } =
       await this.userBooksService.createBookRequest(user_id, userBook_id);
     return { request_id, notification };
+  }
+  @Put('request/:id/status/next')
+  async nextBookRequestStatus(
+    @Param('id') request_id,
+    @Request() req: RequestWithUID,
+  ) {
+    const { user_id } = req.user;
+    return await this.userBooksService.nextRequestStatus(request_id, user_id);
   }
 }

@@ -6,8 +6,8 @@ import {
 import { Document, Schema } from 'mongoose';
 import { Books } from 'src/books/schema/book.schema';
 import { User } from 'src/user/schema/user.schema';
-import { Exclude, Transform, Type } from 'class-transformer';
-import { BookRequest } from 'src/book-request/schema/bookRequest.schema';
+import { Transform, Type } from 'class-transformer';
+import { BookRequest } from './bookRequest.schema';
 
 export type UserBooksDocument = UserBooks & Document;
 
