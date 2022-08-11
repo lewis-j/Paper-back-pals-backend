@@ -1,9 +1,9 @@
-export const status: string[] = [
-  'REQUEST',
-  'ACCEPTED',
-  'SENDING',
-  'CHECKED_OUT',
-  'IS_DUE',
-  'RETURNING',
-  'CHECK_IN',
-];
+export const status = {
+  REQUEST: 'REQUEST',
+  ACCEPTED: 'ACCEPTED',
+  SENDING: 'SENDING',
+  CHECKED_OUT: 'CHECKED_OUT',
+  IS_DUE: 'IS_DUE',
+  RETURNING: 'RETURNING',
+  CHECK_IN: 'CHECK_IN',
+};

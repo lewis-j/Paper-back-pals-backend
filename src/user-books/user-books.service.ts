@@ -32,6 +32,10 @@ export class UserBooksService {
     return newUserBook.populate(['book', 'owner']);
   }
 
+  async getBookRequest(request_id: string) {
+    return this.bookRequestService.getBookRequest(request_id);
+  }
+
   async createBookRequest(user_id: string, userBook_id: string) {
     const user = await this.bookRequestService.doesRequestExist(
       user_id,
@@ -56,27 +60,34 @@ export class UserBooksService {
         {
           runValidators: true,
           session: _session,
-          populate: { path: 'owner', select: '_id' },
+          populate: [
+            { path: 'owner', select: '_id' },
+            { path: 'book', select: 'title' },
+          ],
         },
       );
 
       const notificationPayload = {
-        requestType: requestTypeEnum['BookRequest'],
-        messages: {
-          sender: 'You made a book request',
-          recipient: 'You have a new book request!',
+        requestPayload: {
+          requestType: requestTypeEnum['BookRequest'],
+          requestRef: newBookRequest._id,
         },
-        requestRef: newBookRequest._id,
+        sender: {
+          _id: user_id,
+          message: `You made a book request for ${userBook.book.title}`,
+          actionRequired: false,
+        },
+        recipient: {
+          _id: userBook.owner._id,
+          message: `You have a book request for ${userBook.book.title}`,
+          actionRequired: true,
+        },
       };
-      const notificationData = {
-        sender_id: user_id,
-        recipient_id: userBook.owner._id,
-        notificationPayload,
-      };
+      console.log('notificationPayload:', notificationPayload);
 
       const newNotification =
         await this.notificationsService.createNotification(
-          notificationData,
+          notificationPayload,
           _session,
         );
 

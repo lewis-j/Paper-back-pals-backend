@@ -1,13 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import mongoose, { ClientSession, Model, Types } from 'mongoose';
-import { CreateNotificationDto } from './dto/CreateNotificationDto';
-import CreateNotifications from './dto/CreateNotifications.interface';
+import { InjectModel } from '@nestjs/mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 
 import {
   Notifications,
   NotificationsDocument,
 } from './schema/Notifications.schema';
+import CreateNotifications from './interface/CreateNotifications.interface';
 
 @Injectable()
 export class NotificationsService {
@@ -20,28 +19,23 @@ export class NotificationsService {
     session: ClientSession,
   ) {
     const {
-      sender_id,
-      recipient_id,
-      notificationPayload: { requestType, messages, requestRef },
+      sender: { _id: sender_id, ...senderPayload },
+      recipient: { _id: recipient_id, ...recipientPayload },
+      requestPayload,
     } = notificationsData;
-    const requestData = { requestType, requestRef };
     const senderAsObjectId = new Types.ObjectId(sender_id);
     const recipientAsObjectId = new Types.ObjectId(recipient_id);
 
-    const notificationObj = {
-      ...requestData,
-      user: recipientAsObjectId,
-      message: messages.recipient,
-    };
-    console.log('notificationObj', notificationObj);
+    console.log('requestPayload:', requestPayload);
 
     try {
       await this.notificationsModel.create(
         [
           {
-            ...requestData,
-            user: recipientAsObjectId,
-            message: messages.recipient,
+            ...requestPayload,
+            ...recipientPayload,
+            user: senderAsObjectId,
+            recipient: recipientAsObjectId,
           },
         ],
         { session: session },
@@ -49,9 +43,10 @@ export class NotificationsService {
       return await this.notificationsModel.create(
         [
           {
-            ...requestData,
-            user: senderAsObjectId,
-            message: messages.sender,
+            ...requestPayload,
+            ...senderPayload,
+            user: recipientAsObjectId,
+            recipient: senderAsObjectId,
           },
         ],
         { session: session },
@@ -68,11 +63,21 @@ export class NotificationsService {
     return await notification.populate('schemaRef');
   }
 
-  public async getManyNotifications(notificationIds: string[]) {
-    const notificationDocs = this.notificationsModel.find({
-      _id: { $in: notificationIds },
-    });
+  public async getNotifications(user_id: string) {
+    const notificationDocs = await this.notificationsModel.find(
+      {
+        recipient: user_id,
+      },
+      null,
+      {
+        populate: {
+          path: 'user',
+          select: 'profilePic username',
+        },
+        select: '-createdAt -updatedAt -recipient',
+      },
+    );
 
-    return notificationDocs.populate('schemaRef');
+    return notificationDocs;
   }
 }

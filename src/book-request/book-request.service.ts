@@ -27,4 +27,10 @@ export class BookRequestService {
     console.log('isExistingUser', isExistingUser);
     return isExistingUser;
   }
+
+  async getBookRequest(request_id: string) {
+    return this.bookRequestModel.findById(request_id, null, {
+      populate: { path: 'userBook', populate: 'book' },
+    });
+  }
 }

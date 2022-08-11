@@ -27,7 +27,11 @@ export class UserBooksController {
     const { user_id } = req.user;
     return this.userBooksService.createUserBook(user_id, userBook);
   }
-  @Post('create-request')
+  @Get('request/:id')
+  async getOneRequest(@Param('id') request_id: string) {
+    return await this.userBooksService.getBookRequest(request_id);
+  }
+  @Post('request')
   async createBookRequest(@Request() req: RequestWithUID, @Body() body: any) {
     const { user_id } = req.user;
     const { userBook_id } = body;

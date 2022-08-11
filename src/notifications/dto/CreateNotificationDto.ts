@@ -3,13 +3,7 @@ export enum requestTypeEnum {
   FriendRequest = 'FriendRequest',
 }
 
-class NotificationsMessages {
-  readonly sender: string;
-  readonly recipient: string;
-}
-
-export class CreateNotificationDto {
-  readonly messages: NotificationsMessages;
+export class CreateRequestDto {
   readonly requestType: requestTypeEnum;
   readonly requestRef: string;
 }
