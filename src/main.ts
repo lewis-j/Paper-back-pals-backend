@@ -34,6 +34,6 @@ async function bootstrap() {
   app.use(cookieParser(cookieSecret));
   app.use(csurf({ cookie: { key: '_csrf', sameSite: true } }));
 
-  await app.listen(3001);
+  await app.listen(process.env.PORT || 8080);
 }
 bootstrap();
