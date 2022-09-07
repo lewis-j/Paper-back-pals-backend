@@ -13,8 +13,9 @@ async function bootstrap() {
   const privateKey = configService.get<string>('FIREBASE_PRIVATE_KEY');
   console.log(
     'getting firebase type',
-    configService.get<string>('FIREBASE_TYPE'),
+    configService.get<string>('FIREBASE_PRIVATE_KEY'),
   );
+  console.log('JSON.parse(privateKey)', JSON.parse(privateKey));
   const firebase_params = {
     type: configService.get<string>('FIREBASE_TYPE'),
     projectId: configService.get<string>('FIREBASE_PROJECT_ID'),
