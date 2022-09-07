@@ -8,6 +8,7 @@ import * as csurf from 'csurf';
 // import * as firebaseConfig from './authentication/firebase.config.json';
 
 async function bootstrap() {
+  console.log('testing logger');
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const privateKey = configService.get<string>('FIREBASE_PRIVATE_KEY');
