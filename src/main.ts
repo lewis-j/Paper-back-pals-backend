@@ -15,12 +15,12 @@ async function bootstrap() {
     'getting firebase type',
     configService.get<string>('FIREBASE_PRIVATE_KEY'),
   );
-  console.log('JSON.parse(privateKey)', JSON.parse(privateKey));
+  console.log('privateKey.replace()', privateKey.replace(/\\n/g, '\n'));
   const firebase_params = {
     type: configService.get<string>('FIREBASE_TYPE'),
     projectId: configService.get<string>('FIREBASE_PROJECT_ID'),
     privateKeyId: configService.get<string>('FIREBASE_PRIVATE_KEY_ID'),
-    privateKey: privateKey ? JSON.parse(privateKey) : undefined,
+    privateKey: privateKey ? privateKey.replace(/\\n/g, '\n') : undefined,
     clientEmail: configService.get<string>('FIREBASE_CLIENT_EMAIL'),
     clientId: configService.get<string>('FIREBASE_CLIENT_ID'),
     authUri: configService.get<string>('FIREBASE_AUTH_URI'),
