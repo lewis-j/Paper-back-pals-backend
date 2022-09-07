@@ -28,12 +28,17 @@ async function bootstrap() {
 
   admin.initializeApp({ credential: admin.credential.cert(firebase_params) });
 
-  app.enableCors({ origin: 'http://localhost:3000', credentials: true });
+  app.enableCors({
+    origin: configService.get<string>('WHITELIST_URL'),
+    credentials: true,
+  });
 
   const cookieSecret = configService.get<string>('COOKIE_SECRET');
   app.use(cookieParser(cookieSecret));
   app.use(csurf({ cookie: { key: '_csrf', sameSite: true } }));
 
-  await app.listen(process.env.PORT || 8080);
+  await app.listen(process.env.PORT || 8080, () =>
+    console.log('Nest App listening on port', process.env.PORT || 8080),
+  );
 }
 bootstrap();
