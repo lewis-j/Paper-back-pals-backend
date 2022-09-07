@@ -64,6 +64,7 @@ export class AuthenticationController {
     @Request() req: RequestWithUser,
     @Response({ passthrough: true }) res: ResponseType,
   ) {
+    console.log('logging in google');
     const { user: firebaseUser } = req;
     const { user, statusCode } = await this.userService.upsertFireUser(
       firebaseUser,
