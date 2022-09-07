@@ -29,8 +29,14 @@ export class NotificationsService {
     console.log('requestPayload:', requestPayload);
 
     try {
-      await this.notificationsModel.create(
+      return await this.notificationsModel.create(
         [
+          {
+            ...requestPayload,
+            ...senderPayload,
+            user: recipientAsObjectId,
+            recipient: senderAsObjectId,
+          },
           {
             ...requestPayload,
             ...recipientPayload,
@@ -40,20 +46,25 @@ export class NotificationsService {
         ],
         { session: session },
       );
-      return await this.notificationsModel.create(
-        [
-          {
-            ...requestPayload,
-            ...senderPayload,
-            user: recipientAsObjectId,
-            recipient: senderAsObjectId,
-          },
-        ],
-        { session: session },
-      );
     } catch (error) {
       return Promise.reject(error);
     }
+  }
+
+  public async markAsRead(notification_id: string) {
+    return this.notificationsModel.findByIdAndUpdate(
+      notification_id,
+      { isRead: true },
+      {
+        new: true,
+
+        populate: {
+          path: 'user',
+          select: 'profilePic username',
+        },
+        select: '-createdAt -updatedAt -recipient',
+      },
+    );
   }
 
   public async getOneNotification(notification_id: string) {
@@ -70,11 +81,12 @@ export class NotificationsService {
       },
       null,
       {
+        sort: '-createdAt',
         populate: {
           path: 'user',
           select: 'profilePic username',
         },
-        select: '-createdAt -updatedAt -recipient',
+        select: '-updatedAt -recipient',
       },
     );
 

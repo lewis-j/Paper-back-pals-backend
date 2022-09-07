@@ -85,6 +85,23 @@ export class UserService {
   //   }
   // }
 
+  public async setCurrentRead(user_id, userBook_id) {
+    const userBookAsObjectId = new Types.ObjectId(userBook_id);
+    try {
+      return await this.userModel.findByIdAndUpdate(
+        user_id,
+        {
+          currentRead: userBookAsObjectId,
+        },
+        {
+          new: true,
+        },
+      );
+    } catch (error) {
+      return error;
+    }
+  }
+
   async getOneUser(_id: string) {
     const user = await this.userModel.getUser(_id);
 

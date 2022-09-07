@@ -92,7 +92,6 @@ UserSchema.virtual('borrowedBooks', {
   ref: 'BookRequest',
   localField: '_id',
   foreignField: 'sender',
-  match: { status: 'CHECKED_OUT' },
 });
 
 UserSchema.virtual('ownedBooks', {
@@ -112,7 +111,7 @@ UserSchema.virtual('notifications', {
 });
 
 const populateUser = async (findFunc) => {
-  return await findFunc
+  const user = await findFunc
     .populate([
       {
         path: 'friends',
@@ -134,12 +133,34 @@ const populateUser = async (findFunc) => {
       },
       {
         path: 'ownedBooks',
-        populate: ['book', 'owner'],
+        populate: [
+          'book',
+          {
+            path: 'currentRequest',
+            populate: { path: 'sender', select: 'username profilePic' },
+            select: 'status dueDate sender',
+          },
+        ],
       },
-      'borrowedBooks',
+      {
+        path: 'borrowedBooks',
+        populate: {
+          path: 'userBook',
+          populate: [
+            { path: 'book' },
+            { path: 'currentRequest', select: 'dueDate status' },
+            { path: 'owner', select: 'username profilePic' },
+          ],
+          select: 'book currentRequest owner',
+        },
+      },
       'notifications',
+      { path: 'currentRead', populate: 'currentRequest owner book' },
     ])
     .exec();
+  user.borrowedBooks = user.borrowedBooks.map(({ userBook }) => userBook);
+
+  return user;
 };
 
 UserSchema.static('getAuthUser', async function (user_id: string) {
@@ -159,7 +180,15 @@ UserSchema.static('getUser', async function (user_id: string) {
       },
       {
         path: 'ownedBooks',
-        populate: ['book', 'owner', { path: 'request', select: '_id' }],
+        populate: [
+          'book',
+          {
+            path: 'currentRequest',
+            populate: [{ path: 'sender', select: 'username profilePic' }],
+            select: 'status sender dueDate',
+          },
+          { path: 'request', select: '_id' },
+        ],
       },
       'borrowedBooks',
     ])

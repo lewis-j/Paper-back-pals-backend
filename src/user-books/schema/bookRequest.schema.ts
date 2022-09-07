@@ -29,8 +29,17 @@ export class BookRequest {
   @Type(() => User)
   sender: User;
 
-  @Prop({ type: String, enum: status, default: 'REQUEST' })
+  @Prop({ type: String, enum: status, default: 'CHECKED_IN' })
   status: string;
+
+  @Prop({ type: Number, default: 0 })
+  currentPage: number;
+
+  @Prop({
+    type: Date,
+    default: null,
+  })
+  dueDate: Date;
 }
 
 export const BookRequestSchema = SchemaFactory.createForClass(BookRequest);

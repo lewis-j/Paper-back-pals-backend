@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -23,5 +24,12 @@ export class NotificationsController {
       user_id,
     );
     return notifications;
+  }
+  @Put('isRead/:id')
+  async setIsRead(@Param('id') notification_id) {
+    const notification = await this.notificationServices.markAsRead(
+      notification_id,
+    );
+    return { notification };
   }
 }

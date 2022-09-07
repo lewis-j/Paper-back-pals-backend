@@ -2,12 +2,15 @@ import {
   Controller,
   Get,
   Param,
+  Put,
   Query,
+  Request,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/authentication/jwt-auth-guard';
 import MongooseClassSerializerInterceptor from 'src/authentication/mongooseClassSerializer.interceptor';
+import RequestWithUID from 'src/authentication/requestWithUID.interface';
 import { User } from './schema/user.schema';
 import { UserService } from './user.service';
 
@@ -32,5 +35,15 @@ export class UserController {
     const user = await this.userService.getOneUser(user_id);
     console.log('user', user);
     return user;
+  }
+
+  @Put('setCurrentRead/:id')
+  async setCurrentRead(
+    @Param('id') userBook_id: string,
+    @Request() req: RequestWithUID,
+  ) {
+    console.log('current read update', userBook_id);
+    const { user_id } = req.user;
+    return await this.userService.setCurrentRead(user_id, userBook_id);
   }
 }

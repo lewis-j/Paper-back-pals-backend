@@ -25,7 +25,7 @@ export class UserBooksService {
     @InjectConnection() private connection: Connection,
   ) {}
 
-  async createUserBook(user_id: string, book: createBookDto) {
+  public async createUserBook(user_id: string, book: createBookDto) {
     const book_id = await this.bookService.createBook(book);
 
     const userId = new Types.ObjectId(user_id);
@@ -38,21 +38,24 @@ export class UserBooksService {
     return newUserBook.populate(['book', 'owner']);
   }
 
-  async getBookRequest(request_id: string) {
+  public async getBookRequest(request_id: string) {
     return this.bookRequestModel.findById(request_id, null, {
       populate: { path: 'userBook', populate: 'book' },
     });
   }
 
-  async doesRequestExist(user_id: string, userBook_id: string) {
+  private async doesRequestExist(user_id: string, userBook_id: string) {
     const isExistingUser = await this.bookRequestModel.findOne({
       $and: [{ sender: user_id }, { userBook: userBook_id }],
     });
-    console.log('isExistingUser', isExistingUser);
     return isExistingUser;
   }
 
-  async createNewRequest(sender_id: string, userBook_id: string, session) {
+  private async createNewRequest(
+    sender_id: string,
+    userBook_id: string,
+    session,
+  ) {
     const senderAsObjectId = new Types.ObjectId(sender_id);
     const userBookAsObjectId = new Types.ObjectId(userBook_id);
     const newBookRequest = new this.bookRequestModel({
@@ -62,7 +65,7 @@ export class UserBooksService {
     return newBookRequest.save({ session });
   }
 
-  async createBookRequest(user_id: string, userBook_id: string) {
+  public async createBookRequest(user_id: string, userBook_id: string) {
     const user = await this.doesRequestExist(user_id, userBook_id);
     if (user) {
       throw new ConflictException(`book request from user: ${user_id} exist!`);
@@ -106,9 +109,8 @@ export class UserBooksService {
           actionRequired: true,
         },
       };
-      console.log('notificationPayload:', notificationPayload);
 
-      const newNotification =
+      const [newNotification] =
         await this.notificationsService.createNotification(
           notificationPayload,
           _session,
@@ -116,14 +118,14 @@ export class UserBooksService {
 
       return Promise.resolve({
         request_id: newBookRequest._id,
-        notification: newNotification,
+        notification: await newNotification.populate('user'),
       });
     });
     session.endSession();
     return result;
   }
 
-  async nextRequestStatus(request_id: string, user_id: string) {
+  public async nextRequestStatus(request_id: string, user_id: string) {
     const bookRequest = await this.bookRequestModel.findById(request_id);
     if (!bookRequest) throw new NotFoundException('The request does not exist');
     const session = await this.connection.startSession();
@@ -132,24 +134,56 @@ export class UserBooksService {
       (status) => status === bookRequest.status,
     );
 
-    console.log('bookRequest', bookRequest);
+    const _status = _statusEnum[idx + 1];
 
-    bookRequest.status = _statusEnum[idx + 1];
-    return this.withTransaction(session, async (_session) => {
-      // const _bookRequest = await bookRequest.save({ session: _session });
+    bookRequest.status = _status;
+
+    if (_status === bookRequestStatus.CHECKED_OUT) {
+      bookRequest.dueDate = new Date(+new Date() + 30 * 24 * 60 * 60 * 1000);
+    }
+    const result = await this.withTransaction(session, async (_session) => {
+      const _bookRequest = await bookRequest.save({ session: _session });
+      const userBook = await this.userBooksModel.findById(
+        _bookRequest.userBook._id,
+      );
       const notificationPayload = await this.getPayloadFromBookRequest(
-        bookRequest,
+        _bookRequest,
       );
 
-      console.log('notificationPayload:', notificationPayload);
+      if (_status === bookRequestStatus.ACCEPTED) {
+        userBook.currentRequest = _bookRequest._id;
+        await userBook.save({ session: _session });
+        console.log(
+          'status: ACCEPTED',
+          'userBook:::',
+          userBook,
+          'bookRequest',
+          _bookRequest,
+        );
+      }
 
-      // const newNotification =
-      //   await this.notificationsService.createNotification(
-      //     notificationPayload,
-      //     _session,
-      //   );
-      // return newNotification;
+      if (_status === bookRequestStatus.RETURNED) {
+        userBook.currentRequest = null;
+        await userBook.save({ session: _session });
+      }
+      const [senderNotification, recipientNotification] =
+        await this.notificationsService.createNotification(
+          notificationPayload,
+          _session,
+        );
+      console.log(
+        '_bookRequest.sender._id.toString() === user_id:',
+        _bookRequest.sender._id.toString() === user_id,
+      );
+
+      if (_bookRequest.sender._id.toString() === user_id)
+        return await senderNotification.populate('user');
+
+      return await recipientNotification.populate('user');
     });
+    session.endSession();
+
+    return { notification: result };
   }
 
   private async getPayloadFromBookRequest(bookRequest: BookRequestDocument) {
@@ -158,63 +192,105 @@ export class UserBooksService {
       populate: { path: 'book', select: 'title' },
       select: 'book owner',
     });
-    console.log('populated bookRequest', bookRequest);
+
     const { userBook } = bookRequest;
     const requestPayload = {
       requestType: requestTypeEnum['BookRequest'],
       requestRef: bookRequest._id,
     };
-    const defaultPayload = {
-      sender: {
-        _id: bookRequest.sender,
-      },
-      recipient: {
-        _id: userBook.owner,
-      },
-    };
-    console.log('bookRequest.status:', bookRequest.status);
 
     const [sender, recipient] = this.getUserBookNotificationPayload(
       bookRequest.status,
       userBook.book.title,
+      bookRequest.dueDate,
     );
-
-    console.log('sender:', sender);
-    console.log('recipient:', recipient);
 
     return {
       requestPayload,
-      sender: { ...defaultPayload.sender, ...sender },
+      sender: { _id: bookRequest.sender._id, ...sender },
       recipient: {
-        ...defaultPayload.recipient,
+        _id: userBook.owner._id,
         ...recipient,
       },
     };
   }
 
-  private getUserBookNotificationPayload(status, title) {
-    return {
+  private getUserBookNotificationPayload(status, title, dueDate) {
+    const [sender, recipient] = {
       [bookRequestStatus.ACCEPTED]: [
         {
-          message: `Your book request for "${title}" was accepted!`,
-          actionRequired: true,
+          message: `Your book request for "${title}" was accepted! Waiting for dropoff`,
+          actionRequired: false,
         },
         {
-          message: `You accepted a book request for "${title}"!`,
-          actionRequired: false,
+          message: `You accepted a book request for "${title}"! Confirm Dropoff`,
+          actionRequired: true,
         },
       ],
       [bookRequestStatus.SENDING]: [
         {
-          message: `"${title}" is on its way! Waiting for drop off!`,
+          message: `"${title}" was dropped off! Confirm pickup!`,
+          actionRequired: true,
+        },
+        {
+          message: `You dropped off "${title}!". Waiting for pickup confirmation`,
+          actionRequired: false,
+        },
+      ],
+      [bookRequestStatus.CHECKED_OUT]: [
+        {
+          message: ((date) =>
+            `"${title}" is checked out! Your due date is ${new Intl.DateTimeFormat(
+              'en',
+              {
+                dateStyle: 'medium',
+              },
+            ).format(date)}`)(dueDate),
           actionRequired: false,
         },
         {
-          message: `Confirm drop off of your book "${title}!"`,
+          message: ((date) =>
+            `Your book "${title}!" is now checked out! Expected return date is ${new Intl.DateTimeFormat(
+              'en',
+              {
+                dateStyle: 'medium',
+              },
+            ).format(date)}`)(dueDate),
+          actionRequired: false,
+        },
+      ],
+      [bookRequestStatus.IS_DUE]: [
+        {
+          message: `"${title}" is now due! Confirm drop off!`,
+          actionRequired: true,
+        },
+        {
+          message: `"${title}" is now due! Waiting for drop off!`,
+          actionRequired: false,
+        },
+      ],
+      [bookRequestStatus.RETURNING]: [
+        {
+          message: `You dropped off "${title}"! Waiting for pickup confirmation!`,
+          actionRequired: false,
+        },
+        {
+          message: `Your book "${title}!" was dropped off. Confirm pickup`,
           actionRequired: true,
         },
       ],
+      [bookRequestStatus.RETURNED]: [
+        {
+          message: `"${title}" was returned!`,
+          actionRequired: false,
+        },
+        {
+          message: `"${title}" was returned!`,
+          actionRequired: false,
+        },
+      ],
     }[status];
+    return [sender, recipient];
   }
 
   private async withTransaction(session, closure) {
