@@ -8,10 +8,13 @@ import * as csurf from 'csurf';
 // import * as firebaseConfig from './authentication/firebase.config.json';
 
 async function bootstrap() {
-  console.log('testing logger');
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const privateKey = configService.get<string>('FIREBASE_PRIVATE_KEY');
+  console.log(
+    'getting firebase type',
+    configService.get<string>('FIREBASE_TYPE'),
+  );
   const firebase_params = {
     type: configService.get<string>('FIREBASE_TYPE'),
     projectId: configService.get<string>('FIREBASE_PROJECT_ID'),
