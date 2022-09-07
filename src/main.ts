@@ -11,11 +11,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const privateKey = configService.get<string>('FIREBASE_PRIVATE_KEY');
-  console.log(
-    'getting firebase type',
-    configService.get<string>('FIREBASE_PRIVATE_KEY'),
-  );
-  console.log('privateKey.replace()', privateKey.replace(/\\n/g, '\n'));
+
   const firebase_params = {
     type: configService.get<string>('FIREBASE_TYPE'),
     projectId: configService.get<string>('FIREBASE_PROJECT_ID'),
@@ -40,7 +36,14 @@ async function bootstrap() {
 
   const cookieSecret = configService.get<string>('COOKIE_SECRET');
   app.use(cookieParser(cookieSecret));
-  app.use(csurf({ cookie: { key: '_csrf', sameSite: true } }));
+  app.use(
+    csurf({
+      cookie: {
+        key: '_csrf',
+        domain: configService.get<string>('WHITELIST_URL'),
+      },
+    }),
+  );
 
   await app.listen(process.env.PORT || 8080, () =>
     console.log('Nest App listening on port', process.env.PORT || 8080),
