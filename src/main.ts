@@ -36,14 +36,14 @@ async function bootstrap() {
 
   const cookieSecret = configService.get<string>('COOKIE_SECRET');
   app.use(cookieParser(cookieSecret));
-  app.use(
-    csurf({
-      cookie: {
-        key: '_csrf',
-        domain: configService.get<string>('WHITELIST_URL'),
-      },
-    }),
-  );
+  // app.use(
+  //   csurf({
+  //     cookie: {
+  //       key: '_csrf',
+  //       domain: configService.get<string>('WHITELIST_URL'),
+  //     },
+  //   }),
+  // );
   app.use(function (err, req, res, next) {
     if (err.code !== 'EBADCSRFTOKEN') return next(err);
 

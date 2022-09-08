@@ -29,7 +29,7 @@ export class AppModule implements NestModule {
   public configure(consumer: MiddlewareConsumer): void {
     consumer
       .apply((req, res, next) => {
-        console.log('Request csrf token', req.header('xsrf-token'));
+        // console.log('Request csrf token', req.header('xsrf-token'));
         next();
       })
       .forRoutes('*');

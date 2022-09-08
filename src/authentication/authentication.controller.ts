@@ -36,11 +36,11 @@ export class AuthenticationController {
     return user;
   }
 
-  @Get('token')
-  getCsrfToken(@Request() req) {
-    const token = req.csrfToken();
-    return { csrfToken: token };
-  }
+  // @Get('token')
+  // getCsrfToken(@Request() req) {
+  //   const token = req.csrfToken();
+  //   return { csrfToken: token };
+  // }
 
   @UseGuards(FirebaseAuthGuard)
   @UseInterceptors(MongooseClassSerializerInterceptor(User))
