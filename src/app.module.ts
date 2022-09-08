@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
@@ -25,4 +25,13 @@ import { NotificationsModule } from './notifications/notifications.module';
   controllers: [AppController],
   providers: [AppService, FirebaseAuthStrategy],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  public configure(consumer: MiddlewareConsumer): void {
+    consumer
+      .apply((req, res, next) => {
+        console.log('Request csrf token', req.header('xsrf-token'));
+        next();
+      })
+      .forRoutes('*');
+  }
+}
