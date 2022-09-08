@@ -48,6 +48,7 @@ async function bootstrap() {
     if (err.code !== 'EBADCSRFTOKEN') return next(err);
 
     // handle CSRF token errors here
+    console.log('error in token', err);
     res.status(403);
     res.send('CSRF TOKEN is bad');
   });
