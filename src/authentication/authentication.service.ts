@@ -21,6 +21,8 @@ export class AuthenticationService {
   public setAuthCookies(res: Response, idToken): Response {
     res.cookie('Authorization', idToken, {
       signed: true,
+      sameSite: 'none',
+      secure: true,
       maxAge: 1000 * this.configService.get<number>('JWT_EXPIRATION_TIME'),
       httpOnly: true,
     });

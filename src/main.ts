@@ -4,11 +4,11 @@ import { ConfigService } from '@nestjs/config';
 import * as cookieParser from 'cookie-parser';
 import * as admin from 'firebase-admin';
 import * as csurf from 'csurf';
-
-// import * as firebaseConfig from './authentication/firebase.config.json';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.set('trust proxy', 1);
   const configService = app.get(ConfigService);
   const privateKey = configService.get<string>('FIREBASE_PRIVATE_KEY');
 
