@@ -1,0 +1,28 @@
+// Update August 12, 2019
+
+// @Andrew Wolfe had a great point in the comments, asking about workspace activation events. As I implement similar configurations in future projects, I will probably go in that direction.
+
+// Original answer:
+
+// Ended up using @HansPassant's solution: https://code.visualstudio.com/docs/editor/tasks#_custom-tasks
+
+// So something similar to this in my .vscode/tasks.json file:
+
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Launch app", // Name of task
+      "type": "shell",
+      "command": "npm run start:dev", // Enter your command here
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    }
+  ]
+}

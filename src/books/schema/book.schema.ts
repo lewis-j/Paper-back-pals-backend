@@ -19,6 +19,9 @@ export class Books {
 
   @Prop({ required: true })
   description: string;
+
+  @Prop({ required: true })
+  pageCount: number;
 }
 
 export const BooksSchema = SchemaFactory.createForClass(Books);

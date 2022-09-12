@@ -137,7 +137,10 @@ const populateUser = async (findFunc) => {
           'book',
           {
             path: 'currentRequest',
-            populate: { path: 'sender', select: 'username profilePic' },
+            populate: {
+              path: 'sender',
+              select: 'username profilePic',
+            },
             select: 'status dueDate sender',
           },
         ],
@@ -148,7 +151,7 @@ const populateUser = async (findFunc) => {
           path: 'userBook',
           populate: [
             { path: 'book' },
-            { path: 'currentRequest', select: 'dueDate status' },
+            { path: 'currentRequest', select: 'dueDate status currentPage' },
             { path: 'owner', select: 'username profilePic' },
           ],
           select: 'book currentRequest owner',

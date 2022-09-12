@@ -4,4 +4,5 @@ export class createBookDto {
   readonly title: string;
   readonly authors: string[];
   readonly description: string;
+  readonly pageCount: number;
 }
