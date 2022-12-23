@@ -185,6 +185,12 @@ export class UserBooksService {
 
     return { notification: result };
   }
+  public async updatePageCount(request_id: string, pageCount: number) {
+    console.log(request_id, pageCount);
+    const bookRequest = await this.bookRequestModel.findById(request_id);
+    bookRequest.currentPage = pageCount;
+    return await bookRequest.save();
+  }
 
   private async getPayloadFromBookRequest(bookRequest: BookRequestDocument) {
     await bookRequest.populate({

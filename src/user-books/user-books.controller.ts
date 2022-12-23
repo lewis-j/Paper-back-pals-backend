@@ -48,4 +48,12 @@ export class UserBooksController {
     const { user_id } = req.user;
     return await this.userBooksService.nextRequestStatus(request_id, user_id);
   }
+  @Put('request/:id/updatePageCount')
+  async updatePageCount(@Param('id') request_id, @Body() body: any) {
+    const { pageCount } = body;
+    const result = await this.userBooksService.updatePageCount(
+      request_id,
+      pageCount,
+    );
+  }
 }
