@@ -1,11 +1,12 @@
 import {
-  HttpCode,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model, Types } from 'mongoose';
+import { requestTypeEnum } from 'src/notifications/dto/CreateNotificationDto';
+import { NotificationsService } from 'src/notifications/notifications.service';
 import { UserService } from 'src/user/user.service';
 import {
   FriendRequest,
@@ -19,6 +20,7 @@ export class FriendsService {
     private readonly friendRequest: Model<FriendRequestsDocument>,
     @InjectConnection() private readonly connection: mongoose.Connection,
     private readonly usersService: UserService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   public createRequest = async (user_id: string, recipient_id: string) => {
@@ -31,15 +33,61 @@ export class FriendsService {
         recipient: recipientAsObjectId,
       });
       if (result) throw Error('Request already exist');
+      const session = await this.connection.startSession();
+      const transactionResult = await this.withTransaction(
+        session,
+        async (_session) => {
+          const friendRequest = new this.friendRequest({
+            sender: userAsObjectId,
+            recipient: recipientAsObjectId,
+          });
 
-      return await this.friendRequest.create({
-        sender: userAsObjectId,
-        recipient: recipientAsObjectId,
-      });
+          const newRequest = await friendRequest.save({ session: _session });
+          return this.createNotification(
+            user_id,
+            recipient_id,
+            newRequest._id,
+            _session,
+          );
+        },
+      );
+
+      return transactionResult;
     } catch (error) {
       console.log('Error:::', error);
       return Promise.reject(error);
     }
+  };
+
+  private createNotification = async (
+    user_id,
+    recipient_id,
+    newRequest_id,
+    session,
+  ) => {
+    const userInfo = await this.usersService.getOneUser(user_id);
+    const recipientInfo = await this.usersService.getOneUser(recipient_id);
+
+    const notificationPayload = {
+      sender: {
+        _id: user_id,
+        message: `You made a Friend request to ${recipientInfo.username}`,
+        actionRequired: false,
+      },
+      recipient: {
+        _id: recipient_id,
+        message: `${userInfo.username} has requested to be your Friend`,
+        actionRequired: true,
+      },
+      requestPayload: {
+        requestType: requestTypeEnum['FriendRequest'],
+        requestRef: newRequest_id,
+      },
+    };
+    return await this.notificationsService.createNotification(
+      notificationPayload,
+      session,
+    );
   };
 
   public removeRequest = async (request_id: string) => {
@@ -70,7 +118,7 @@ export class FriendsService {
   private withTransaction = async (session, closure) => {
     let result;
     await session.withTransaction(() => {
-      result = closure();
+      result = closure(session);
       return result;
     });
     return result;

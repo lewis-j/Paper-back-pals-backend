@@ -40,7 +40,12 @@ export class FriendsController {
 
     const { user_id } = req.user;
     try {
-      await this.friendsService.createRequest(user_id, recipient_id);
+      const notification = await this.friendsService.createRequest(
+        user_id,
+        recipient_id,
+      );
+      console.log(notification);
+      return { notification };
     } catch (error) {
       console.log('error in post friend request', error.message);
       throw new HttpException(error.message, HttpStatus.CONFLICT);

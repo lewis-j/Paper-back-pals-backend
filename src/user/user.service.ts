@@ -23,7 +23,9 @@ export class UserService {
     const { firebase_id: id } = firebaseUser;
     try {
       const existingUser = await this.userModel.getFireUser(id);
+      console.log('existing user', existingUser);
       if (existingUser) return { user: existingUser, statusCode: 200 };
+      console.log('user does not exist');
       const newUser = await this.userModel.create(firebaseUser);
       return { user: newUser, statusCode: 201 };
     } catch (err) {

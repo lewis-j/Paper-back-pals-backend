@@ -7,10 +7,12 @@ import {
   FriendRequest,
   FriendRequestSchema,
 } from './schema/friendRequest.schema';
+import { NotificationsModule } from 'src/notifications/notifications.module';
 
 @Module({
   imports: [
     UserModule,
+    NotificationsModule,
     MongooseModule.forFeature([
       { name: FriendRequest.name, schema: FriendRequestSchema },
     ]),

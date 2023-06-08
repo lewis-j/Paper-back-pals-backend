@@ -124,8 +124,11 @@ const populateUser = async (findFunc) => {
       },
       {
         path: 'friendRequestInbox',
-        populate: { path: 'sender', select: '_id username profilePic' },
-        select: 'sender -recipient',
+        populate: {
+          path: 'sender',
+          select: '_id username profilePic',
+        },
+        select: 'sender createdAt -recipient ',
       },
       {
         path: 'bookRequest',
@@ -157,11 +160,16 @@ const populateUser = async (findFunc) => {
           select: 'book currentRequest owner',
         },
       },
-      'notifications',
+      {
+        path: 'notifications',
+        options: { limit: 20 },
+      },
       { path: 'currentRead', populate: 'currentRequest owner book' },
     ])
     .exec();
-  user.borrowedBooks = user.borrowedBooks.map(({ userBook }) => userBook);
+  if (user?.borrowedBooks) {
+    user.borrowedBooks = user.borrowedBooks.map(({ userBook }) => userBook);
+  }
 
   return user;
 };
