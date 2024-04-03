@@ -91,7 +91,7 @@ export class FriendsService {
   };
 
   public removeRequest = async (request_id: string) => {
-    return await this.friendRequest.remove(request_id);
+    return await this.friendRequest.deleteOne({ _id: request_id });
   };
 
   public addFriend = async (request_id: string, user_id: string) => {
@@ -104,7 +104,7 @@ export class FriendsService {
     try {
       const session = await this.connection.startSession();
       const newFriend = await this.withTransaction(session, async () => {
-        await request.remove({ session: session });
+        await request.deleteOne({ session: session });
         return await this.usersService.addFriendFromRequest(request, session);
       });
       session.endSession();
