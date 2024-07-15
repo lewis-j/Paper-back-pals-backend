@@ -10,6 +10,7 @@ import { UserBooksModule } from './user-books/user-books.module';
 import { AuthenticationModule } from './authentication/authentication.module';
 import { FriendsModule } from './friends/friends.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     AuthenticationModule,
     FriendsModule,
     NotificationsModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
   providers: [AppService, FirebaseAuthStrategy],

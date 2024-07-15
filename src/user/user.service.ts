@@ -63,29 +63,48 @@ export class UserService {
       return error;
     }
   }
-  // async updateUser(
-  //   firebaseData: CreateFireUserDto,
-  //   updatedUser: UpdateUserDto,
-  // ) {
-  //   const { firebase_id, email, email_verified } = firebaseData;
-  //   try {
-  //     const user = await this.userModel.findOne({
-  //       firebaseId: firebase_id,
-  //     });
-  //     const userData = { ...updatedUser, email, email_verified };
+  async updateUser(
+    firebaseData: CreateFireUserDto,
+    updatedUser: UpdateUserDto,
+  ) {
+    const { firebase_id, email, email_verified } = firebaseData;
+    try {
+      const user = await this.userModel.findOne({
+        firebaseId: firebase_id,
+      });
+      const userData = { ...updatedUser, email, email_verified };
 
-  //     if (!user) {
-  //       throw new NotFoundException('User does not exist');
-  //     }
-  //     [...Object.keys(updatedUser)].map((property) => {
-  //       user[`${property}`] = userData[`${property}`];
-  //     });
-  //     const { _id } = await user.save();
-  //     return { _id };
-  //   } catch (error) {
-  //     return error;
-  //   }
-  // }
+      if (!user) {
+        throw new NotFoundException('User does not exist');
+      }
+      [...Object.keys(updatedUser)].map((property) => {
+        user[`${property}`] = userData[`${property}`];
+      });
+      const { _id } = await user.save();
+      return { _id };
+    } catch (error) {
+      return error;
+    }
+  }
+
+  public async setProfileImg(user_id, imgUrl) {
+    try {
+      console.log('imgURl', imgUrl);
+      const updatedUser = await this.userModel.findByIdAndUpdate(
+        user_id,
+        {
+          profilePic: imgUrl,
+        },
+        {
+          new: true,
+        },
+      );
+      console.log('Usermodel updated', updatedUser);
+      return updatedUser;
+    } catch (error) {
+      return error;
+    }
+  }
 
   public async setCurrentRead(user_id, userBook_id) {
     const userBookAsObjectId = new Types.ObjectId(userBook_id);
