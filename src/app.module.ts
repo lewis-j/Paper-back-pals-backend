@@ -11,6 +11,7 @@ import { AuthenticationModule } from './authentication/authentication.module';
 import { FriendsModule } from './friends/friends.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     FriendsModule,
     NotificationsModule,
     CloudinaryModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, FirebaseAuthStrategy],
