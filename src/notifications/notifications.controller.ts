@@ -23,6 +23,7 @@ export class NotificationsController {
     const notifications = await this.notificationServices.getNotifications(
       user_id,
     );
+    console.log('notifications', notifications);
     return notifications;
   }
   @Put('isRead/:id')

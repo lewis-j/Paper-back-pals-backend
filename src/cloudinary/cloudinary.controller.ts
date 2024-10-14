@@ -22,7 +22,6 @@ export class CloudinaryController {
     @UploadedFile() file: Express.Multer.File,
     @Request() req: RequestWithUID,
   ) {
-    console.log('file', file);
     if (!file) {
       throw new Error('File is undefined');
     }

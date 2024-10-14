@@ -36,8 +36,6 @@ export class FriendsController {
     @Param('id') recipient_id: string,
     @Req() req: RequestWithUID,
   ) {
-    console.log('recipient_id', recipient_id);
-
     const { user_id } = req.user;
     try {
       const notification = await this.friendsService.createRequest(

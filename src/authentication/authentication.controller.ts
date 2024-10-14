@@ -32,7 +32,6 @@ export class AuthenticationController {
   async fetchUser(@Request() req: RequestWithUID) {
     const { user_id } = req.user;
     const user = await this.userService.getAuthUserById(user_id);
-    console.log('user from fetch USER::::', { user });
     return user;
   }
 
@@ -64,7 +63,6 @@ export class AuthenticationController {
     @Request() req: RequestWithUser,
     @Response({ passthrough: true }) res: ResponseType,
   ) {
-    console.log('logging in google');
     const { user: firebaseUser } = req;
     const { user, statusCode } = await this.userService.upsertFireUser(
       firebaseUser,

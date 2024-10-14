@@ -1,4 +1,3 @@
-// src/chat/chat.gateway.ts
 import {
   WebSocketGateway,
   SubscribeMessage,
@@ -7,9 +6,18 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { ChatService } from './chat.service';
 
-@WebSocketGateway()
+@WebSocketGateway({
+  cors: {
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+})
 export class ChatGateway {
+  constructor(private chatService: ChatService) {}
+
   @WebSocketServer()
   server: Server;
 
@@ -30,9 +38,24 @@ export class ChatGateway {
   }
 
   @SubscribeMessage('sendMessage')
-  handleMessage(
+  async handleMessage(
     @MessageBody() data: { roomId: string; message: string; sender: string },
   ) {
-    this.server.to(data.roomId).emit('newMessage', data);
+    try {
+      // Use the ChatService to create and save the message
+      const savedMessage = await this.chatService.createMessage(
+        data.roomId,
+        data.sender,
+        data.message,
+      );
+
+      // Emit the saved message to all clients in the room
+      this.server.to(data.roomId).emit('newMessage', savedMessage);
+
+      return savedMessage;
+    } catch (error) {
+      console.error('Error saving message:', error);
+      // You might want to emit an error event to the client here
+    }
   }
 }

@@ -153,13 +153,6 @@ export class UserBooksService {
       if (_status === bookRequestStatus.ACCEPTED) {
         userBook.currentRequest = _bookRequest._id;
         await userBook.save({ session: _session });
-        console.log(
-          'status: ACCEPTED',
-          'userBook:::',
-          userBook,
-          'bookRequest',
-          _bookRequest,
-        );
       }
 
       if (_status === bookRequestStatus.RETURNED) {
@@ -171,10 +164,6 @@ export class UserBooksService {
           notificationPayload,
           _session,
         );
-      console.log(
-        '_bookRequest.sender._id.toString() === user_id:',
-        _bookRequest.sender._id.toString() === user_id,
-      );
 
       if (_bookRequest.sender._id.toString() === user_id)
         return await senderNotification.populate('user');
@@ -186,7 +175,6 @@ export class UserBooksService {
     return { notification: result };
   }
   public async updatePageCount(request_id: string, pageCount: number) {
-    console.log(request_id, pageCount);
     const bookRequest = await this.bookRequestModel.findById(request_id);
     bookRequest.currentPage = pageCount;
     return await bookRequest.save();

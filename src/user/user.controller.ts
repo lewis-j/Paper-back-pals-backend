@@ -31,9 +31,8 @@ export class UserController {
   @Get(':id')
   @UseInterceptors(MongooseClassSerializerInterceptor(User))
   async getUser(@Param('id') user_id: string) {
-    console.log('id in getUSer', user_id);
     const user = await this.userService.getOneUser(user_id);
-    console.log('user', user);
+
     return user;
   }
 
@@ -42,7 +41,6 @@ export class UserController {
     @Param('id') userBook_id: string,
     @Request() req: RequestWithUID,
   ) {
-    console.log('current read update', userBook_id);
     const { user_id } = req.user;
     return await this.userService.setCurrentRead(user_id, userBook_id);
   }

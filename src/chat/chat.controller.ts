@@ -1,6 +1,17 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ChatService } from './chat.service';
+import { JwtAuthGuard } from 'src/authentication/jwt-auth-guard';
+import RequestWithUID from 'src/authentication/requestWithUID.interface';
 
+@UseGuards(JwtAuthGuard)
 @Controller('chat')
 export class ChatController {
   constructor(private chatService: ChatService) {}
@@ -12,13 +23,12 @@ export class ChatController {
 
   @Post('room')
   async createOrGetChatRoom(
-    @Body() body: { user1Id: string; user2Id: string },
+    @Request() req: RequestWithUID,
+    @Body() body: { user2Id: string },
   ) {
+    const user1Id = req.user.user_id;
     return {
-      roomId: await this.chatService.createOrGetChatRoom(
-        body.user1Id,
-        body.user2Id,
-      ),
+      roomId: await this.chatService.createOrGetChatRoom(user1Id, body.user2Id),
     };
   }
 
