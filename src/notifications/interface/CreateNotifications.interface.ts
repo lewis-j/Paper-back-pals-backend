@@ -1,17 +1,18 @@
 interface CreateNotifications {
-  sender: BookUserPayload;
-  recipient: BookUserPayload;
+  sender: UserPayload;
+  recipient: UserPayload;
   requestPayload: RequestPayload;
 }
 
 interface UserPayload {
   _id: string;
   message: string;
+  confirmation?: string;
 }
 
-interface BookUserPayload extends UserPayload {
-  actionRequired: boolean;
-}
+// interface BookUserPayload extends UserPayload {
+//   actionRequired: boolean;
+// }
 
 export enum requestTypeEnum {
   BookRequest = 'BookRequest',

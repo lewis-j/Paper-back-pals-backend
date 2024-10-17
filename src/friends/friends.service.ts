@@ -72,12 +72,11 @@ export class FriendsService {
       sender: {
         _id: user_id,
         message: `You made a Friend request to ${recipientInfo.username}`,
-        actionRequired: false,
       },
       recipient: {
         _id: recipient_id,
         message: `${userInfo.username} has requested to be your Friend`,
-        actionRequired: true,
+        confirmation: `Accept the friend request from ${userInfo.username}?`,
       },
       requestPayload: {
         requestType: requestTypeEnum['FriendRequest'],

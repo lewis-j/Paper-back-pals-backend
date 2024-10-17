@@ -144,7 +144,7 @@ const populateUser = async (findFunc) => {
               path: 'sender',
               select: 'username profilePic',
             },
-            select: 'status dueDate sender',
+            select: 'status dueDate sender currentPage',
           },
         ],
       },

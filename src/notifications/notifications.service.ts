@@ -26,8 +26,6 @@ export class NotificationsService {
     const senderAsObjectId = new Types.ObjectId(sender_id);
     const recipientAsObjectId = new Types.ObjectId(recipient_id);
 
-    console.log('requestPayload:', requestPayload);
-
     try {
       return await this.notificationsModel.create(
         [

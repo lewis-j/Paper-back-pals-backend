@@ -20,8 +20,8 @@ export class Notifications {
   @Prop({ required: true })
   message: string;
 
-  @Prop()
-  actionRequired: boolean;
+  @Prop({ required: false })
+  confirmation?: string;
 
   @Prop({
     required: true,

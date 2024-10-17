@@ -101,12 +101,11 @@ export class UserBooksService {
         sender: {
           _id: user_id,
           message: `You made a book request for ${userBook.book.title}`,
-          actionRequired: false,
         },
         recipient: {
           _id: userBook.owner._id,
           message: `You have a book request for ${userBook.book.title}`,
-          actionRequired: true,
+          confirmation: `Accept the book request for ${userBook.book.title}?`,
         },
       };
 
@@ -214,21 +213,19 @@ export class UserBooksService {
       [bookRequestStatus.ACCEPTED]: [
         {
           message: `Your book request for "${title}" was accepted! Waiting for dropoff`,
-          actionRequired: false,
         },
         {
           message: `You accepted a book request for "${title}"! Confirm Dropoff`,
-          actionRequired: true,
+          confirmation: `Confirm that you've dropped off "${title}"`,
         },
       ],
       [bookRequestStatus.SENDING]: [
         {
           message: `"${title}" was dropped off! Confirm pickup!`,
-          actionRequired: true,
+          confirmation: `Confirm that you've picked up "${title}"`,
         },
         {
           message: `You dropped off "${title}!". Waiting for pickup confirmation`,
-          actionRequired: false,
         },
       ],
       [bookRequestStatus.CHECKED_OUT]: [
@@ -240,7 +237,6 @@ export class UserBooksService {
                 dateStyle: 'medium',
               },
             ).format(date)}`)(dueDate),
-          actionRequired: false,
         },
         {
           message: ((date) =>
@@ -250,37 +246,32 @@ export class UserBooksService {
                 dateStyle: 'medium',
               },
             ).format(date)}`)(dueDate),
-          actionRequired: false,
         },
       ],
       [bookRequestStatus.IS_DUE]: [
         {
           message: `"${title}" is now due! Confirm drop off!`,
-          actionRequired: true,
+          confirmation: `Confirm that you're ready to return "${title}"`,
         },
         {
           message: `"${title}" is now due! Waiting for drop off!`,
-          actionRequired: false,
         },
       ],
       [bookRequestStatus.RETURNING]: [
         {
           message: `You dropped off "${title}"! Waiting for pickup confirmation!`,
-          actionRequired: false,
         },
         {
           message: `Your book "${title}!" was dropped off. Confirm pickup`,
-          actionRequired: true,
+          confirmation: `Confirm that you've received "${title}" back`,
         },
       ],
       [bookRequestStatus.RETURNED]: [
         {
           message: `"${title}" was returned!`,
-          actionRequired: false,
         },
         {
           message: `"${title}" was returned!`,
-          actionRequired: false,
         },
       ],
     }[status];
