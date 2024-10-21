@@ -146,6 +146,7 @@ const populateUser = async (findFunc) => {
             },
             select: 'status dueDate sender currentPage',
           },
+          { path: 'request', select: '_id status' },
         ],
       },
       {
@@ -164,7 +165,7 @@ const populateUser = async (findFunc) => {
         path: 'notifications',
         options: { limit: 20 },
       },
-      { path: 'currentRead', populate: 'currentRequest owner book' },
+      { path: 'currentRead', select: '_id' },
     ])
     .exec();
   if (user?.borrowedBooks) {
