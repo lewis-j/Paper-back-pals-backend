@@ -35,16 +35,6 @@ export class UserBooks {
   // )
   owner: User;
 
-  // @Prop({ type: Schema.Types.ObjectId, ref: 'User' })
-  // @Type(() => User)
-  // // @Transform(
-  // //   (value) => {
-  // //     if (Object.keys(value.value).length !== 0) return value.value;
-  // //   },
-  // //   { toClassOnly: true },
-  // // )
-  // recipient: User;
-
   @Prop([{ type: Schema.Types.ObjectId, ref: 'BookRequest', default: null }])
   @Type(() => BookRequest)
   request: BookRequest[];

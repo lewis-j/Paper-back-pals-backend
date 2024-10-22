@@ -7,7 +7,6 @@ import { Document, Schema, Types } from 'mongoose';
 import { Exclude, Transform, Type } from 'class-transformer';
 import { UserBooks } from 'src/user-books/schema/userbooks.schema';
 import { FriendRequest } from 'src/friends/schema/friendRequest.schema';
-import { BookRequest } from 'src/user-books/schema/bookRequest.schema';
 import { Notifications } from 'src/notifications/schema/Notifications.schema';
 
 export type UserDocument = User & Document;
@@ -54,9 +53,6 @@ export class User {
   @Type(() => UserBooks)
   ownedBooks: UserBooks[];
 
-  @Type(() => BookRequest)
-  bookRequest: UserBooks[];
-
   @Prop({
     type: [{ type: Schema.Types.ObjectId, ref: 'User', default: null }],
   })
@@ -99,11 +95,6 @@ UserSchema.virtual('ownedBooks', {
   localField: '_id',
   foreignField: 'owner',
 });
-UserSchema.virtual('bookRequest', {
-  ref: 'BookRequest',
-  localField: '_id',
-  foreignField: 'sender',
-});
 UserSchema.virtual('notifications', {
   ref: 'Notifications',
   localField: '_id',
@@ -129,10 +120,6 @@ const populateUser = async (findFunc) => {
           select: '_id username profilePic',
         },
         select: 'sender createdAt -recipient ',
-      },
-      {
-        path: 'bookRequest',
-        populate: [{ path: 'userBook', select: '_id' }],
       },
       {
         path: 'ownedBooks',
@@ -199,7 +186,11 @@ UserSchema.static('getUser', async function (user_id: string) {
             populate: [{ path: 'sender', select: 'username profilePic' }],
             select: 'status sender dueDate',
           },
-          { path: 'request', select: '_id' },
+          {
+            path: 'request',
+            populate: { path: 'sender', select: '_id' },
+            select: '_id status sender',
+          },
         ],
       },
       'borrowedBooks',
