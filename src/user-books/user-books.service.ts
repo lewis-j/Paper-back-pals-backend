@@ -142,22 +142,11 @@ export class UserBooksService {
     }
     const result = await this.withTransaction(session, async (_session) => {
       const _bookRequest = await bookRequest.save({ session: _session });
-      const userBook = await this.userBooksModel.findById(
-        _bookRequest.userBook._id,
-      );
+
       const notificationPayload = await this.getPayloadFromBookRequest(
         _bookRequest,
       );
 
-      if (_status === bookRequestStatus.ACCEPTED) {
-        userBook.currentRequest = _bookRequest._id;
-        await userBook.save({ session: _session });
-      }
-
-      if (_status === bookRequestStatus.RETURNED) {
-        userBook.currentRequest = null;
-        await userBook.save({ session: _session });
-      }
       const [senderNotification, recipientNotification] =
         await this.notificationsService.createNotification(
           notificationPayload,

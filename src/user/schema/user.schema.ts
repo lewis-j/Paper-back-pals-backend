@@ -124,17 +124,16 @@ const populateUser = async (findFunc) => {
       {
         path: 'ownedBooks',
         populate: [
-          'book',
           {
-            path: 'currentRequest',
-            populate: {
-              path: 'sender',
-              select: 'username profilePic',
-            },
-            select: 'status dueDate sender currentPage',
+            path: 'book',
           },
-          { path: 'request', select: '_id status' },
+          {
+            path: 'request',
+            select: '_id status dueDate currentPage',
+            populate: { path: 'sender', select: '_id' },
+          },
         ],
+        select: 'book request -owner', // Include fields you want and exclude owner
       },
       {
         path: 'borrowedBooks',
@@ -142,11 +141,11 @@ const populateUser = async (findFunc) => {
           path: 'userBook',
           populate: [
             { path: 'book' },
-            { path: 'currentRequest', select: 'dueDate status currentPage' },
             { path: 'owner', select: 'username profilePic' },
           ],
-          select: 'book currentRequest owner',
+          select: 'book owner',
         },
+        select: '_id userBook status currentPage dueDate', // Make sure to include _id here
       },
       {
         path: 'notifications',
@@ -156,7 +155,18 @@ const populateUser = async (findFunc) => {
     ])
     .exec();
   if (user?.borrowedBooks) {
-    user.borrowedBooks = user.borrowedBooks.map(({ userBook }) => userBook);
+    user.borrowedBooks = user.borrowedBooks.map(
+      ({ _id, userBook, status, currentPage, dueDate }) => {
+        return {
+          _id: userBook._id,
+          book: userBook.book,
+          owner: userBook.owner,
+          request: { status, request_id: _id.toString() },
+          currentPage,
+          dueDate,
+        };
+      },
+    );
   }
 
   return user;
@@ -182,13 +192,8 @@ UserSchema.static('getUser', async function (user_id: string) {
         populate: [
           'book',
           {
-            path: 'currentRequest',
-            populate: [{ path: 'sender', select: 'username profilePic' }],
-            select: 'status sender dueDate',
-          },
-          {
             path: 'request',
-            populate: { path: 'sender', select: '_id' },
+            populate: { path: 'sender', select: '_id username profilePic' },
             select: '_id status sender',
           },
         ],

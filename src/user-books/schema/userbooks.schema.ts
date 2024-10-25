@@ -38,10 +38,6 @@ export class UserBooks {
   @Prop([{ type: Schema.Types.ObjectId, ref: 'BookRequest', default: null }])
   @Type(() => BookRequest)
   request: BookRequest[];
-
-  @Prop({ type: Schema.Types.ObjectId, ref: 'BookRequest', default: null })
-  @Type(() => BookRequest)
-  currentRequest: BookRequest;
 }
 
 export const UserBooksSchema = SchemaFactory.createForClass(UserBooks);
