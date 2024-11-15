@@ -8,6 +8,7 @@ import {
   Request,
   UseGuards,
   UseInterceptors,
+  Delete,
 } from '@nestjs/common';
 import { createBookDto } from 'src/books/dto/createBookDto';
 import { JwtAuthGuard } from 'src/authentication/jwt-auth-guard';
@@ -57,5 +58,13 @@ export class UserBooksController {
       currentPage,
     );
     console.log('result in user books', result);
+  }
+  @Delete(':id')
+  async deleteUserBook(
+    @Param('id') userbook_id: string,
+    @Request() req: RequestWithUID,
+  ) {
+    const { user_id } = req.user;
+    return await this.userBooksService.deleteUserBook(user_id, userbook_id);
   }
 }

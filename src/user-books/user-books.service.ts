@@ -275,4 +275,28 @@ export class UserBooksService {
     });
     return result;
   }
+
+  public async deleteUserBook(user_id: string, userbook_id: string) {
+    const userBook = await this.userBooksModel.findOne({
+      _id: userbook_id,
+      owner: user_id,
+    });
+
+    if (!userBook) {
+      throw new NotFoundException('UserBook not found or unauthorized');
+    }
+
+    // Check if book has active requests
+    const activeRequests = await this.bookRequestModel.find({
+      userBook: userbook_id,
+      status: { $nin: [bookRequestStatus.RETURNED] },
+    });
+
+    if (activeRequests.length > 0) {
+      throw new ConflictException('Cannot delete book with active requests');
+    }
+
+    await userBook.deleteOne();
+    return { message: 'UserBook successfully deleted' };
+  }
 }
