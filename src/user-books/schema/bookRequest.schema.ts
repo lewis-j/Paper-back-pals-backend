@@ -11,6 +11,12 @@ import { status } from './status-enums';
 
 export type BookRequestDocument = BookRequest & Document;
 
+// Add new interface for status history
+interface StatusHistory {
+  status: string;
+  timestamp: Date;
+}
+
 @SchemaDecorator({ timestamps: true })
 export class BookRequest {
   @Transform(
@@ -32,6 +38,14 @@ export class BookRequest {
   @Prop({ type: String, enum: status, default: 'CHECKED_IN' })
   status: string;
 
+  @Prop([
+    {
+      status: { type: String, enum: status },
+      timestamp: { type: Date, default: Date.now },
+    },
+  ])
+  statusHistory: StatusHistory[];
+
   @Prop({ type: Number, default: 0 })
   currentPage: number;
 
@@ -43,3 +57,21 @@ export class BookRequest {
 }
 
 export const BookRequestSchema = SchemaFactory.createForClass(BookRequest);
+
+// Add a pre-save middleware to track status changes
+BookRequestSchema.pre('save', function (next) {
+  const bookRequest = this as BookRequestDocument;
+
+  if (bookRequest.isModified('status')) {
+    if (!bookRequest.statusHistory) {
+      bookRequest.statusHistory = [];
+    }
+
+    bookRequest.statusHistory.push({
+      status: bookRequest.status,
+      timestamp: new Date(),
+    });
+  }
+
+  next();
+});

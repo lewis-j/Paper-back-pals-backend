@@ -95,11 +95,6 @@ UserSchema.virtual('ownedBooks', {
   localField: '_id',
   foreignField: 'owner',
 });
-UserSchema.virtual('notifications', {
-  ref: 'Notifications',
-  localField: '_id',
-  foreignField: 'user',
-});
 
 const populateUser = async (findFunc) => {
   const user = await findFunc
@@ -129,7 +124,7 @@ const populateUser = async (findFunc) => {
           },
           {
             path: 'request',
-            select: '_id status dueDate currentPage',
+            select: '_id status dueDate currentPage createdAt',
             populate: { path: 'sender', select: '_id' },
           },
         ],
@@ -146,10 +141,6 @@ const populateUser = async (findFunc) => {
           select: 'book owner',
         },
         select: '_id userBook status currentPage dueDate', // Make sure to include _id here
-      },
-      {
-        path: 'notifications',
-        options: { limit: 20 },
       },
       { path: 'currentRead', select: '_id' },
     ])
@@ -194,7 +185,7 @@ UserSchema.static('getUser', async function (user_id: string) {
           {
             path: 'request',
             populate: { path: 'sender', select: '_id username profilePic' },
-            select: '_id status sender',
+            select: '_id status sender dueDate currentPage',
           },
         ],
       },
