@@ -33,13 +33,24 @@ export class UserBooksController {
   async getOneRequest(@Param('id') request_id: string) {
     return await this.userBooksService.getBookRequest(request_id);
   }
+  @Delete('request/:id')
+  async deleteOneRequest(
+    @Param('id') request_id: string,
+    @Request() req: RequestWithUID,
+  ) {
+    const { user_id } = req.user;
+    console.log('delete request', request_id, user_id);
+    return await this.userBooksService.deleteBookRequest(request_id, user_id);
+  }
   @Post('request')
   async createBookRequest(@Request() req: RequestWithUID, @Body() body: any) {
     const { user_id } = req.user;
     const { userBook_id } = body;
-    const { request_id, notification } =
+    console.log('create book request', user_id, userBook_id);
+    const { bookRequest, notification } =
       await this.userBooksService.createBookRequest(user_id, userBook_id);
-    return { request_id, notification };
+    console.log('bookRequest', bookRequest);
+    return { bookRequest, notification };
   }
   @Put('request/:id/status/next')
   async nextBookRequestStatus(
@@ -52,7 +63,7 @@ export class UserBooksController {
   @Put('request/:id/updatePageCount')
   async updatePageCount(@Param('id') request_id, @Body() body: any) {
     const { currentPage } = body;
-    console.log('pagecount in user books', currentPage);
+    console.log('request_id in user books', request_id);
     const result = await this.userBooksService.updatePageCount(
       request_id,
       currentPage,

@@ -8,6 +8,12 @@ import { Exclude, Transform, Type } from 'class-transformer';
 import { UserBooks } from 'src/user-books/schema/userbooks.schema';
 import { FriendRequest } from 'src/friends/schema/friendRequest.schema';
 import { Notifications } from 'src/notifications/schema/Notifications.schema';
+import { BookRequest } from 'src/user-books/schema/bookRequest.schema';
+import mongoose from 'mongoose';
+import {
+  bookRequestPopulateOptions,
+  transformBookRequest,
+} from 'src/util/populate.utils';
 
 export type UserDocument = User & Document;
 
@@ -132,32 +138,14 @@ const populateUser = async (findFunc) => {
       },
       {
         path: 'borrowedBooks',
-        populate: {
-          path: 'userBook',
-          populate: [
-            { path: 'book' },
-            { path: 'owner', select: 'username profilePic' },
-          ],
-          select: 'book owner',
-        },
-        select: '_id userBook status currentPage dueDate', // Make sure to include _id here
+        populate: bookRequestPopulateOptions,
+        select: '_id userBook status currentPage dueDate',
       },
       { path: 'currentRead', select: '_id' },
     ])
     .exec();
   if (user?.borrowedBooks) {
-    user.borrowedBooks = user.borrowedBooks.map(
-      ({ _id, userBook, status, currentPage, dueDate }) => {
-        return {
-          _id: userBook._id,
-          book: userBook.book,
-          owner: userBook.owner,
-          request: { status, request_id: _id.toString() },
-          currentPage,
-          dueDate,
-        };
-      },
-    );
+    user.borrowedBooks = user.borrowedBooks.map(transformBookRequest);
   }
 
   return user;
@@ -168,6 +156,7 @@ UserSchema.static('getAuthUser', async function (user_id: string) {
 });
 
 UserSchema.static('getFireUser', async function (firebase_id: string) {
+  console.log('getFireUser', firebase_id);
   return await populateUser(this.findOne({ firebase_id: firebase_id }));
 });
 

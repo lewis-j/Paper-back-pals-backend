@@ -21,6 +21,7 @@ export class UserService {
 
   async upsertFireUser(firebaseUser: GoogleUserDto) {
     const { firebase_id: id } = firebaseUser;
+    console.log('upsertFireUser', firebaseUser);
     try {
       const existingUser = await this.userModel.getFireUser(id);
       if (existingUser) return { user: existingUser, statusCode: 200 };

@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Model, Types, Connection } from 'mongoose';
@@ -12,6 +13,10 @@ import { NotificationsService } from 'src/notifications/notifications.service';
 import { requestTypeEnum } from 'src/notifications/dto/CreateNotificationDto';
 import { BookRequest, BookRequestDocument } from './schema/bookRequest.schema';
 import { status as bookRequestStatus } from './schema/status-enums';
+import {
+  bookRequestPopulateOptions,
+  transformBookRequest,
+} from 'src/util/populate.utils';
 
 @Injectable()
 export class UserBooksService {
@@ -65,6 +70,47 @@ export class UserBooksService {
     return newBookRequest.save({ session });
   }
 
+  public async deleteBookRequest(request_id: string, user_id: string) {
+    const bookRequest = await this.bookRequestModel
+      .findById(request_id)
+      .populate('userBook');
+
+    console.log('bookRequest', bookRequest);
+
+    if (!bookRequest) {
+      throw new NotFoundException('Book request not found');
+    }
+
+    // Check if user is authorized to delete the request
+    if (
+      bookRequest.sender.toString() !== user_id &&
+      bookRequest.userBook.owner.toString() !== user_id
+    ) {
+      throw new UnauthorizedException('Not authorized to delete this request');
+    }
+
+    const session = await this.connection.startSession();
+
+    try {
+      const result = await this.withTransaction(session, async (_session) => {
+        //Remove request reference from userBook
+        await this.userBooksModel.updateOne(
+          { _id: bookRequest.userBook },
+          { $pull: { request: request_id } },
+          { session: _session },
+        );
+
+        await bookRequest.deleteOne({ session: _session });
+
+        return { message: 'Book request successfully deleted' };
+      });
+
+      return result;
+    } finally {
+      session.endSession();
+    }
+  }
+
   public async createBookRequest(user_id: string, userBook_id: string) {
     const user = await this.doesRequestExist(user_id, userBook_id);
     if (user) {
@@ -79,6 +125,9 @@ export class UserBooksService {
         userBook_id,
         _session,
       );
+
+      await newBookRequest.populate(bookRequestPopulateOptions);
+      const transformedRequest = transformBookRequest(newBookRequest);
 
       const userBook = await this.userBooksModel.findOneAndUpdate(
         { _id: userBook_id },
@@ -116,7 +165,7 @@ export class UserBooksService {
         );
 
       return Promise.resolve({
-        request_id: newBookRequest._id,
+        bookRequest: transformedRequest,
         notification: await newNotification.populate('user'),
       });
     });
@@ -154,15 +203,26 @@ export class UserBooksService {
         );
 
       if (_bookRequest.sender._id.toString() === user_id)
-        return await senderNotification.populate('user');
+        return {
+          notification: await senderNotification.populate('user'),
+          bookRequest: _bookRequest,
+        };
 
-      return await recipientNotification.populate('user');
+      return {
+        notification: await recipientNotification.populate('user'),
+        bookRequest: _bookRequest,
+      };
     });
     session.endSession();
 
-    return { notification: result };
+    return result;
   }
   public async updatePageCount(request_id: string, pageCount: number) {
+    console.log(
+      'request id and pagecount in user books service',
+      request_id,
+      pageCount,
+    );
     const bookRequest = await this.bookRequestModel.findById(request_id);
     bookRequest.currentPage = pageCount;
     return await bookRequest.save();
@@ -289,14 +349,35 @@ export class UserBooksService {
     // Check if book has active requests
     const activeRequests = await this.bookRequestModel.find({
       userBook: userbook_id,
-      status: { $nin: [bookRequestStatus.RETURNED] },
+      status: {
+        $nin: [bookRequestStatus.RETURNED, bookRequestStatus.CHECKED_IN],
+      },
     });
 
     if (activeRequests.length > 0) {
       throw new ConflictException('Cannot delete book with active requests');
     }
 
-    await userBook.deleteOne();
-    return { message: 'UserBook successfully deleted' };
+    const session = await this.connection.startSession();
+
+    const result = await this.withTransaction(session, async (_session) => {
+      // Delete completed requests
+      await this.bookRequestModel.deleteMany(
+        {
+          userBook: userbook_id,
+          status: {
+            $in: [bookRequestStatus.RETURNED, bookRequestStatus.CHECKED_IN],
+          },
+        },
+        { session: _session },
+      );
+
+      await userBook.deleteOne({ session: _session });
+
+      return { message: 'UserBook successfully deleted' };
+    });
+
+    session.endSession();
+    return result;
   }
 }
