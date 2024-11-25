@@ -126,7 +126,13 @@ export class UserBooksService {
         _session,
       );
 
-      await newBookRequest.populate(bookRequestPopulateOptions);
+      const populateOptionsWithSender = {
+        ...bookRequestPopulateOptions,
+        select: `${bookRequestPopulateOptions.select} sender`,
+      };
+
+      await newBookRequest.populate(populateOptionsWithSender);
+      console.log('newBookRequest', newBookRequest);
       const transformedRequest = transformBookRequest(newBookRequest);
 
       const userBook = await this.userBooksModel.findOneAndUpdate(
