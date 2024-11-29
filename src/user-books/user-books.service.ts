@@ -13,7 +13,7 @@ import { createBookDto } from 'src/books/dto/createBookDto';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { requestTypeEnum } from 'src/notifications/dto/CreateNotificationDto';
 import { BookRequest, BookRequestDocument } from './schema/bookRequest.schema';
-import { status as bookRequestStatus } from './schema/status-enums';
+import { status as bookRequestStatus, dueStatus } from './schema/status-enums';
 import {
   bookRequestPopulateOptions,
   transformBookRequest,
@@ -171,7 +171,7 @@ export class UserBooksService {
         };
 
         const [newNotification] =
-          await this.notificationsService.createNotification(
+          await this.notificationsService.createNotificationForTwoUsers(
             notificationPayload,
             _session,
           );
@@ -215,7 +215,7 @@ export class UserBooksService {
       );
 
       const [senderNotification, recipientNotification] =
-        await this.notificationsService.createNotification(
+        await this.notificationsService.createNotificationForTwoUsers(
           notificationPayload,
           _session,
         );
@@ -235,6 +235,17 @@ export class UserBooksService {
 
     return result;
   }
+
+  public async declineBookRequest(request_id: string) {
+    const bookRequest = await this.bookRequestModel.findById(request_id);
+    bookRequest.status = bookRequestStatus.DECLINED;
+    const userBook = await this.userBooksModel.findById(bookRequest.userBook);
+    userBook.requests = userBook.requests.filter(
+      (request) => request.toString() !== request_id,
+    );
+    await userBook.save();
+    return await bookRequest.save();
+  }
   public async updatePageCount(request_id: string, pageCount: number) {
     console.log(
       'request id and pagecount in user books service',
@@ -246,7 +257,10 @@ export class UserBooksService {
     return await bookRequest.save();
   }
 
-  private async getPayloadFromBookRequest(bookRequest: BookRequestDocument) {
+  private async getPayloadFromBookRequest(
+    bookRequest: BookRequestDocument,
+    optionalStatus: string = null,
+  ) {
     await bookRequest.populate({
       path: 'userBook',
       populate: { path: 'book', select: 'title' },
@@ -258,9 +272,8 @@ export class UserBooksService {
       requestType: requestTypeEnum['BookRequest'],
       requestRef: bookRequest._id.toString(),
     };
-
     const [sender, recipient] = this.getUserBookNotificationPayload(
-      bookRequest.status,
+      optionalStatus ?? bookRequest.status,
       userBook.book.title,
       bookRequest.dueDate,
     );
@@ -276,72 +289,93 @@ export class UserBooksService {
   }
 
   private getUserBookNotificationPayload(status, title, dueDate) {
-    const [sender, recipient] = {
-      [bookRequestStatus.ACCEPTED]: [
-        {
+    let sender, recipient;
+
+    switch (status) {
+      case bookRequestStatus.ACCEPTED:
+        sender = {
           message: `Your book request for "${title}" was accepted! Waiting for dropoff`,
-        },
-        {
+        };
+        recipient = {
           message: `You accepted a book request for "${title}"! Confirm Dropoff`,
           confirmation: `Confirm that you've dropped off "${title}"`,
-        },
-      ],
-      [bookRequestStatus.SENDING]: [
-        {
+        };
+        break;
+
+      case bookRequestStatus.SENDING:
+        sender = {
           message: `"${title}" was dropped off! Confirm pickup!`,
           confirmation: `Confirm that you've picked up "${title}"`,
-        },
-        {
+        };
+        recipient = {
           message: `You dropped off "${title}!". Waiting for pickup confirmation`,
-        },
-      ],
-      [bookRequestStatus.CHECKED_OUT]: [
-        {
-          message: ((date) =>
-            `"${title}" is checked out! Your due date is ${new Intl.DateTimeFormat(
-              'en',
-              {
-                dateStyle: 'medium',
-              },
-            ).format(date)}`)(dueDate),
-        },
-        {
-          message: ((date) =>
-            `Your book "${title}!" is now checked out! Expected return date is ${new Intl.DateTimeFormat(
-              'en',
-              {
-                dateStyle: 'medium',
-              },
-            ).format(date)}`)(dueDate),
-        },
-      ],
-      [bookRequestStatus.IS_DUE]: [
-        {
+        };
+        break;
+
+      case bookRequestStatus.CHECKED_OUT:
+        sender = {
+          message: `"${title}" is checked out! Your due date is ${new Intl.DateTimeFormat(
+            'en',
+            { dateStyle: 'medium' },
+          ).format(dueDate)}`,
+        };
+        recipient = {
+          message: `Your book "${title}!" is now checked out! Expected return date is ${new Intl.DateTimeFormat(
+            'en',
+            { dateStyle: 'medium' },
+          ).format(dueDate)}`,
+        };
+        break;
+
+      case bookRequestStatus.IS_DUE:
+        sender = {
           message: `"${title}" is now due! Confirm drop off!`,
           confirmation: `Confirm that you're ready to return "${title}"`,
-        },
-        {
+        };
+        recipient = {
           message: `"${title}" is now due! Waiting for drop off!`,
-        },
-      ],
-      [bookRequestStatus.RETURNING]: [
-        {
+        };
+        break;
+
+      case bookRequestStatus.RETURNING:
+        sender = {
           message: `You dropped off "${title}"! Waiting for pickup confirmation!`,
-        },
-        {
+        };
+        recipient = {
           message: `Your book "${title}!" was dropped off. Confirm pickup`,
           confirmation: `Confirm that you've received "${title}" back`,
-        },
-      ],
-      [bookRequestStatus.RETURNED]: [
-        {
+        };
+        break;
+
+      case bookRequestStatus.RETURNED:
+        sender = {
           message: `"${title}" was returned!`,
-        },
-        {
+        };
+        recipient = {
           message: `"${title}" was returned!`,
-        },
-      ],
-    }[status];
+        };
+        break;
+      case dueStatus.DUE_SOON:
+        sender = {
+          message: `"${title}" is due soon!`,
+        };
+        recipient = {
+          message: `"${title}" is due soon!`,
+        };
+        break;
+      case dueStatus.DUE_TOMORROW:
+        sender = {
+          message: `"${title}" is due tomorrow!`,
+        };
+        recipient = {
+          message: `"${title}" is due tomorrow!`,
+        };
+        break;
+
+      default:
+        throw new Error(`Unhandled book request status: ${status}`);
+    }
+
     return [sender, recipient];
   }
 
@@ -397,5 +431,67 @@ export class UserBooksService {
 
     session.endSession();
     return result;
+  }
+
+  // ... existing code ...
+
+  public async checkDueBooks() {
+    const now = new Date();
+    const threeDaysBefore = new Date(now);
+    threeDaysBefore.setHours(0, 0, 0, 0);
+    threeDaysBefore.setDate(now.getDate() + 3);
+
+    const session = await this.connection.startSession();
+
+    try {
+      await this.withTransaction(session, async (_session) => {
+        const dueRequests = await this.bookRequestModel
+          .find({
+            status: bookRequestStatus.CHECKED_OUT,
+            dueDate: { $lte: threeDaysBefore },
+          })
+          .populate({
+            path: 'userBook',
+            populate: { path: 'book', select: 'title' },
+          });
+
+        for (const request of dueRequests) {
+          if (!request.dueDate) continue;
+
+          const daysUntilDue = Math.ceil(
+            (request.dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24),
+          );
+
+          let notificationType;
+          if (daysUntilDue <= 0) {
+            notificationType = bookRequestStatus.IS_DUE;
+          } else if (daysUntilDue === 1) {
+            notificationType = dueStatus.DUE_TOMORROW;
+          } else if (daysUntilDue <= 3) {
+            notificationType = dueStatus.DUE_SOON;
+          }
+
+          if (notificationType) {
+            try {
+              const notificationPayload = await this.getPayloadFromBookRequest(
+                request,
+                notificationType,
+              );
+              await this.notificationsService.createNotificationForTwoUsers(
+                notificationPayload,
+                _session,
+              );
+            } catch (error) {
+              console.error(
+                `Failed to create notification for request ${request._id}:`,
+                error,
+              );
+            }
+          }
+        }
+      });
+    } finally {
+      session.endSession();
+    }
   }
 }

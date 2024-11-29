@@ -76,6 +76,10 @@ export class UserBooksController {
     );
     console.log('result in user books', result);
   }
+  @Put('request/:id/decline')
+  async declineBookRequest(@Param('id') request_id: string) {
+    return await this.userBooksService.declineBookRequest(request_id);
+  }
   @Delete(':id')
   async deleteUserBook(
     @Param('id') userbook_id: string,

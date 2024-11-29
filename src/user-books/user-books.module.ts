@@ -6,6 +6,8 @@ import { UserBooks, UserBooksSchema } from './schema/userbooks.schema';
 import { BooksModule } from 'src/books/books.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
 import { BookRequest, BookRequestSchema } from './schema/bookRequest.schema';
+import { ScheduleModule } from '@nestjs/schedule';
+import { UserBooksScheduler } from './user-books.scheduler';
 
 @Module({
   imports: [
@@ -21,8 +23,9 @@ import { BookRequest, BookRequestSchema } from './schema/bookRequest.schema';
         schema: BookRequestSchema,
       },
     ]),
+    ScheduleModule.forRoot(),
   ],
   controllers: [UserBooksController],
-  providers: [UserBooksService],
+  providers: [UserBooksService, UserBooksScheduler],
 })
 export class UserBooksModule {}

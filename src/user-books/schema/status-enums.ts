@@ -6,4 +6,10 @@ export const status = {
   IS_DUE: 'IS_DUE',
   RETURNING: 'RETURNING',
   RETURNED: 'RETURNED',
+  DECLINED: 'DECLINED',
+};
+
+export const dueStatus = {
+  DUE_TOMORROW: 'DUE_TOMORROW',
+  DUE_SOON: 'DUE_SOON',
 };

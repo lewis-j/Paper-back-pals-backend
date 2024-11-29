@@ -14,7 +14,7 @@ export class NotificationsService {
     @InjectModel(Notifications.name)
     private readonly notificationsModel: Model<NotificationsDocument>,
   ) {}
-  public async createNotification(
+  public async createNotificationForTwoUsers(
     notificationsData: CreateNotifications,
     session: ClientSession,
   ) {
