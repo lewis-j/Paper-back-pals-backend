@@ -73,9 +73,11 @@ export class NotificationsService {
   }
 
   public async getNotifications(user_id: string) {
-    const notificationDocs = await this.notificationsModel.find(
+    // Get all unread notifications
+    const unreadNotifications = await this.notificationsModel.find(
       {
         recipient: user_id,
+        isRead: false,
       },
       null,
       {
@@ -88,6 +90,27 @@ export class NotificationsService {
       },
     );
 
-    return notificationDocs;
+    // Get 10 most recent read notifications
+    const readNotifications = await this.notificationsModel.find(
+      {
+        recipient: user_id,
+        isRead: true,
+      },
+      null,
+      {
+        sort: '-createdAt',
+        limit: 10,
+        populate: {
+          path: 'user',
+          select: 'profilePic username',
+        },
+        select: '-updatedAt -recipient',
+      },
+    );
+
+    // Combine and sort both arrays
+    return [...unreadNotifications, ...readNotifications].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
   }
 }

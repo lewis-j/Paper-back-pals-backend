@@ -1,7 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
 import { User } from 'src/user/schema/user.schema';
-export type NotificationsDocument = Notifications & mongoose.Document;
+
+export interface NotificationsDocument
+  extends Notifications,
+    mongoose.Document {
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 @Schema({
   timestamps: true,

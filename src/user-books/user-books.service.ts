@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -96,7 +97,7 @@ export class UserBooksService {
         //Remove request reference from userBook
         await this.userBooksModel.updateOne(
           { _id: bookRequest.userBook },
-          { $pull: { request: request_id } },
+          { $pull: { requests: request_id } },
           { session: _session },
         );
 
@@ -119,67 +120,78 @@ export class UserBooksService {
 
     const session = await this.connection.startSession();
 
-    const result = await this.withTransaction(session, async (_session) => {
-      const newBookRequest = await this.createNewRequest(
-        user_id,
-        userBook_id,
-        _session,
-      );
-
-      const populateOptionsWithSender = {
-        ...bookRequestPopulateOptions,
-        select: `${bookRequestPopulateOptions.select} sender`,
-      };
-
-      await newBookRequest.populate(populateOptionsWithSender);
-      console.log('newBookRequest', newBookRequest);
-      const transformedRequest = transformBookRequest(newBookRequest);
-
-      const userBook = await this.userBooksModel.findOneAndUpdate(
-        { _id: userBook_id },
-        { $push: { request: newBookRequest._id } },
-        {
-          runValidators: true,
-          session: _session,
-          populate: [
-            { path: 'owner', select: '_id' },
-            { path: 'book', select: 'title' },
-          ],
-        },
-      );
-
-      const notificationPayload = {
-        requestPayload: {
-          requestType: requestTypeEnum['BookRequest'],
-          requestRef: newBookRequest._id,
-        },
-        sender: {
-          _id: user_id,
-          message: `You made a book request for ${userBook.book.title}`,
-        },
-        recipient: {
-          _id: userBook.owner._id,
-          message: `You have a book request for ${userBook.book.title}`,
-          confirmation: `Accept the book request for ${userBook.book.title}?`,
-        },
-      };
-
-      const [newNotification] =
-        await this.notificationsService.createNotification(
-          notificationPayload,
+    try {
+      const result = await this.withTransaction(session, async (_session) => {
+        const newBookRequest = await this.createNewRequest(
+          user_id,
+          userBook_id,
           _session,
         );
 
-      return Promise.resolve({
-        bookRequest: transformedRequest,
-        notification: await newNotification.populate('user'),
+        const populateOptionsWithSender = {
+          ...bookRequestPopulateOptions,
+          select: `${bookRequestPopulateOptions.select} sender`,
+        };
+
+        await newBookRequest.populate(populateOptionsWithSender);
+        console.log('newBookRequest', newBookRequest);
+        const transformedRequest = transformBookRequest(newBookRequest);
+
+        const userBook = await this.userBooksModel.findOneAndUpdate(
+          { _id: userBook_id },
+          { $push: { requests: newBookRequest._id } },
+          {
+            runValidators: true,
+            session: _session,
+            populate: [
+              { path: 'owner', select: '_id' },
+              { path: 'book', select: 'title' },
+            ],
+          },
+        );
+
+        if (!userBook) {
+          throw new NotFoundException('UserBook not found');
+        }
+
+        const notificationPayload = {
+          requestPayload: {
+            requestType: requestTypeEnum['BookRequest'],
+            requestRef: newBookRequest._id.toString(),
+          },
+          sender: {
+            _id: user_id.toString(),
+            message: `You made a book request for ${userBook.book.title}`,
+          },
+          recipient: {
+            _id: userBook.owner._id.toString(),
+            message: `You have a book request for ${userBook.book.title}`,
+            confirmation: `Accept the book request for ${userBook.book.title}?`,
+          },
+        };
+
+        const [newNotification] =
+          await this.notificationsService.createNotification(
+            notificationPayload,
+            _session,
+          );
+
+        return Promise.resolve({
+          bookRequest: transformedRequest,
+          notification: await newNotification.populate('user'),
+        });
       });
-    });
-    session.endSession();
-    return result;
+      return result;
+    } finally {
+      session.endSession();
+    }
   }
 
-  public async nextRequestStatus(request_id: string, user_id: string) {
+  public async nextRequestStatus(
+    request_id: string,
+    user_id: string,
+    nextStatus: string,
+  ) {
     const bookRequest = await this.bookRequestModel.findById(request_id);
     if (!bookRequest) throw new NotFoundException('The request does not exist');
     const session = await this.connection.startSession();
@@ -190,8 +202,8 @@ export class UserBooksService {
 
     const _status = _statusEnum[idx + 1];
 
+    if (_status !== nextStatus) throw new BadRequestException('Invalid status');
     bookRequest.status = _status;
-
     if (_status === bookRequestStatus.CHECKED_OUT) {
       bookRequest.dueDate = new Date(+new Date() + 30 * 24 * 60 * 60 * 1000);
     }
@@ -244,7 +256,7 @@ export class UserBooksService {
     const { userBook } = bookRequest;
     const requestPayload = {
       requestType: requestTypeEnum['BookRequest'],
-      requestRef: bookRequest._id,
+      requestRef: bookRequest._id.toString(),
     };
 
     const [sender, recipient] = this.getUserBookNotificationPayload(
@@ -255,9 +267,9 @@ export class UserBooksService {
 
     return {
       requestPayload,
-      sender: { _id: bookRequest.sender._id, ...sender },
+      sender: { _id: bookRequest.sender._id.toString(), ...sender },
       recipient: {
-        _id: userBook.owner._id,
+        _id: userBook.owner._id.toString(),
         ...recipient,
       },
     };

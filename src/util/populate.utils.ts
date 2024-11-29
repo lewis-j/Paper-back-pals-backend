@@ -17,7 +17,7 @@ export const transformBookRequest = (request: any) => {
     owner: userBook.owner,
     request: {
       status,
-      request_id: _id.toString(),
+      id: _id.toString(),
       ...(request.sender && { sender: request.sender }),
     },
     currentPage,

@@ -129,12 +129,12 @@ const populateUser = async (findFunc) => {
             path: 'book',
           },
           {
-            path: 'request',
+            path: 'requests',
             select: '_id status dueDate currentPage createdAt',
             populate: { path: 'sender', select: '_id' },
           },
         ],
-        select: 'book request -owner', // Include fields you want and exclude owner
+        select: 'book requests -owner', // Include fields you want and exclude owner
       },
       {
         path: 'borrowedBooks',
@@ -172,7 +172,7 @@ UserSchema.static('getUser', async function (user_id: string) {
         populate: [
           'book',
           {
-            path: 'request',
+            path: 'requests',
             populate: { path: 'sender', select: '_id username profilePic' },
             select: '_id status sender dueDate currentPage',
           },
