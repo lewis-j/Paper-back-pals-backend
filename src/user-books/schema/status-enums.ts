@@ -6,7 +6,8 @@ export const status = {
   IS_DUE: 'IS_DUE',
   RETURNING: 'RETURNING',
   RETURNED: 'RETURNED',
-  DECLINED: 'DECLINED',
+  DECLINED_BY_OWNER: 'DECLINED_BY_OWNER',
+  CANCELED_BY_SENDER: 'CANCELED_BY_SENDER',
 };
 
 export const dueStatus = {

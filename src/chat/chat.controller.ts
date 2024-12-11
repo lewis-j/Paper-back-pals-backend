@@ -32,8 +32,10 @@ export class ChatController {
     };
   }
 
-  @Get('rooms/:userId')
-  async getChatRoomsForUser(@Param('userId') userId: string) {
-    return this.chatService.getChatRoomsForUser(userId);
+  @Get('rooms')
+  async getChatRoomsForUser(@Request() req: RequestWithUID) {
+    const userId = req.user.user_id;
+
+    return await this.chatService.getChatRoomsForUser(userId);
   }
 }

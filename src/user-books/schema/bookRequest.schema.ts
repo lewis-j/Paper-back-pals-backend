@@ -15,6 +15,13 @@ export type BookRequestDocument = BookRequest & Document;
 interface StatusHistory {
   status: string;
   timestamp: Date;
+  imageUrl?: string;
+}
+
+interface StatusUpdateOptions {
+  status: string;
+  imageUrl?: string;
+  // You can add other metadata here in the future
 }
 
 @SchemaDecorator({ timestamps: true })
@@ -42,6 +49,7 @@ export class BookRequest {
     {
       status: { type: String, enum: status },
       timestamp: { type: Date, default: Date.now },
+      imageUrl: { type: String, required: false },
     },
   ])
   statusHistory: StatusHistory[];
@@ -54,24 +62,33 @@ export class BookRequest {
     default: null,
   })
   dueDate: Date;
+
+  @Prop({ type: Boolean, default: false })
+  pictureRequired: boolean;
+
+  // Add a method to update status with metadata
+  updateStatus(options: StatusUpdateOptions) {
+    if (this.pictureRequired && !options.imageUrl) {
+      throw new Error('Image is required for status updates on this request');
+    }
+
+    this.status = options.status;
+
+    const statusEntry: StatusHistory = {
+      status: options.status,
+      timestamp: new Date(),
+    };
+
+    if (options.imageUrl) {
+      statusEntry.imageUrl = options.imageUrl;
+    }
+
+    if (!this.statusHistory) {
+      this.statusHistory = [];
+    }
+
+    this.statusHistory.push(statusEntry);
+  }
 }
 
 export const BookRequestSchema = SchemaFactory.createForClass(BookRequest);
-
-// Add a pre-save middleware to track status changes
-BookRequestSchema.pre('save', function (next) {
-  const bookRequest = this as BookRequestDocument;
-
-  if (bookRequest.isModified('status')) {
-    if (!bookRequest.statusHistory) {
-      bookRequest.statusHistory = [];
-    }
-
-    bookRequest.statusHistory.push({
-      status: bookRequest.status,
-      timestamp: new Date(),
-    });
-  }
-
-  next();
-});

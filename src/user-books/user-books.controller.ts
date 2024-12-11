@@ -77,8 +77,20 @@ export class UserBooksController {
     console.log('result in user books', result);
   }
   @Put('request/:id/decline')
-  async declineBookRequest(@Param('id') request_id: string) {
-    return await this.userBooksService.declineBookRequest(request_id);
+  async declineBookRequest(
+    @Param('id') request_id: string,
+    @Request() req: RequestWithUID,
+  ) {
+    const { user_id } = req.user;
+    return await this.userBooksService.declineBookRequest(request_id, user_id);
+  }
+  @Put('request/:id/cancel')
+  async cancelBookRequest(
+    @Param('id') request_id: string,
+    @Request() req: RequestWithUID,
+  ) {
+    const { user_id } = req.user;
+    return await this.userBooksService.cancelBookRequest(request_id, user_id);
   }
   @Delete(':id')
   async deleteUserBook(

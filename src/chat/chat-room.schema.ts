@@ -1,12 +1,15 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Schema as MongooseSchema } from 'mongoose';
 
 @Schema()
 export class ChatRoom {
   @Prop({ required: true, unique: true })
   roomId: string;
 
-  @Prop({ required: true })
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'User' }],
+    required: true,
+  })
   participants: string[];
 }
 

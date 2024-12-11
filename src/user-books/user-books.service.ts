@@ -191,9 +191,11 @@ export class UserBooksService {
     request_id: string,
     user_id: string,
     nextStatus: string,
+    imageUrl?: string,
   ) {
     const bookRequest = await this.bookRequestModel.findById(request_id);
     if (!bookRequest) throw new NotFoundException('The request does not exist');
+
     const session = await this.connection.startSession();
     const _statusEnum = Object.values(bookRequestStatus);
     const idx = _statusEnum.findIndex(
@@ -201,12 +203,18 @@ export class UserBooksService {
     );
 
     const _status = _statusEnum[idx + 1];
-
     if (_status !== nextStatus) throw new BadRequestException('Invalid status');
-    bookRequest.status = _status;
+
+    // Use the new updateStatus method
+    bookRequest.updateStatus({
+      status: _status,
+      imageUrl,
+    });
+
     if (_status === bookRequestStatus.CHECKED_OUT) {
       bookRequest.dueDate = new Date(+new Date() + 30 * 24 * 60 * 60 * 1000);
     }
+
     const result = await this.withTransaction(session, async (_session) => {
       const _bookRequest = await bookRequest.save({ session: _session });
 
@@ -236,16 +244,108 @@ export class UserBooksService {
     return result;
   }
 
-  public async declineBookRequest(request_id: string) {
-    const bookRequest = await this.bookRequestModel.findById(request_id);
-    bookRequest.status = bookRequestStatus.DECLINED;
+  public async declineBookRequest(request_id: string, user_id: string) {
+    const bookRequest = await this.bookRequestModel
+      .findById(request_id)
+      .populate('userBook');
+
+    if (!bookRequest) {
+      throw new NotFoundException('Book request not found');
+    }
+
+    // Ensure only the book owner can decline requests
+    if (bookRequest.userBook.owner.toString() !== user_id) {
+      throw new UnauthorizedException(
+        'Only the book owner can decline requests',
+      );
+    }
+
+    bookRequest.status = bookRequestStatus.DECLINED_BY_OWNER;
     const userBook = await this.userBooksModel.findById(bookRequest.userBook);
     userBook.requests = userBook.requests.filter(
       (request) => request.toString() !== request_id,
     );
-    await userBook.save();
-    return await bookRequest.save();
+
+    const session = await this.connection.startSession();
+
+    try {
+      const result = await this.withTransaction(session, async (_session) => {
+        await userBook.save({ session: _session });
+        const savedRequest = await bookRequest.save({ session: _session });
+
+        const notificationPayload = await this.getPayloadFromBookRequest(
+          savedRequest,
+          bookRequestStatus.DECLINED_BY_OWNER,
+        );
+
+        const [senderNotification, recipientNotification] =
+          await this.notificationsService.createNotificationForTwoUsers(
+            notificationPayload,
+            _session,
+          );
+
+        // Return recipient's (owner's) notification since they declined it
+        return {
+          bookRequest: savedRequest,
+          notification: await recipientNotification.populate('user'),
+        };
+      });
+      return result;
+    } finally {
+      session.endSession();
+    }
   }
+
+  public async cancelBookRequest(request_id: string, user_id: string) {
+    const bookRequest = await this.bookRequestModel.findById(request_id);
+
+    if (!bookRequest) {
+      throw new NotFoundException('Book request not found');
+    }
+
+    // Ensure only the sender can cancel their request
+    if (bookRequest.sender.toString() !== user_id) {
+      throw new UnauthorizedException(
+        'Only the requester can cancel their request',
+      );
+    }
+
+    bookRequest.status = bookRequestStatus.CANCELED_BY_SENDER;
+    const userBook = await this.userBooksModel.findById(bookRequest.userBook);
+    userBook.requests = userBook.requests.filter(
+      (request) => request.toString() !== request_id,
+    );
+
+    const session = await this.connection.startSession();
+
+    try {
+      const result = await this.withTransaction(session, async (_session) => {
+        await userBook.save({ session: _session });
+        const savedRequest = await bookRequest.save({ session: _session });
+
+        const notificationPayload = await this.getPayloadFromBookRequest(
+          savedRequest,
+          bookRequestStatus.CANCELED_BY_SENDER,
+        );
+
+        const [senderNotification, recipientNotification] =
+          await this.notificationsService.createNotificationForTwoUsers(
+            notificationPayload,
+            _session,
+          );
+
+        // Return sender's notification since they canceled it
+        return {
+          bookRequest: savedRequest,
+          notification: await senderNotification.populate('user'),
+        };
+      });
+      return result;
+    } finally {
+      session.endSession();
+    }
+  }
+
   public async updatePageCount(request_id: string, pageCount: number) {
     console.log(
       'request id and pagecount in user books service',
@@ -330,7 +430,7 @@ export class UserBooksService {
       case bookRequestStatus.IS_DUE:
         sender = {
           message: `"${title}" is now due! Confirm drop off!`,
-          confirmation: `Confirm that you're ready to return "${title}"`,
+          confirmation: `Confirm that you've dropped off "${title}"`,
         };
         recipient = {
           message: `"${title}" is now due! Waiting for drop off!`,
@@ -339,10 +439,10 @@ export class UserBooksService {
 
       case bookRequestStatus.RETURNING:
         sender = {
-          message: `You dropped off "${title}"! Waiting for pickup confirmation!`,
+          message: `You returned "${title}"! Waiting for pickup confirmation!`,
         };
         recipient = {
-          message: `Your book "${title}!" was dropped off. Confirm pickup`,
+          message: `Your book "${title}!" was returned. Confirm pickup`,
           confirmation: `Confirm that you've received "${title}" back`,
         };
         break;
@@ -355,6 +455,7 @@ export class UserBooksService {
           message: `"${title}" was returned!`,
         };
         break;
+
       case dueStatus.DUE_SOON:
         sender = {
           message: `"${title}" is due soon!`,
@@ -363,12 +464,31 @@ export class UserBooksService {
           message: `"${title}" is due soon!`,
         };
         break;
+
       case dueStatus.DUE_TOMORROW:
         sender = {
           message: `"${title}" is due tomorrow!`,
         };
         recipient = {
           message: `"${title}" is due tomorrow!`,
+        };
+        break;
+
+      case bookRequestStatus.DECLINED_BY_OWNER:
+        sender = {
+          message: `Your book request for "${title}" was declined by the owner`,
+        };
+        recipient = {
+          message: `You declined the book request for "${title}"`,
+        };
+        break;
+
+      case bookRequestStatus.CANCELED_BY_SENDER:
+        sender = {
+          message: `You canceled your request for "${title}"`,
+        };
+        recipient = {
+          message: `The request for "${title}" was canceled by the requester`,
         };
         break;
 

@@ -83,7 +83,7 @@ export class FriendsService {
         requestRef: newRequest_id,
       },
     };
-    return await this.notificationsService.createNotification(
+    return await this.notificationsService.createNotificationForTwoUsers(
       notificationPayload,
       session,
     );

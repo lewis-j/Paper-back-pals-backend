@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Message, MessageDocument } from './message.schema';
 import { ChatRoom, ChatRoomDocument } from './chat-room.schema';
+import * as mongoose from 'mongoose';
 
 @Injectable()
 export class ChatService {
@@ -43,6 +44,54 @@ export class ChatService {
   }
 
   async getChatRoomsForUser(userId: string): Promise<ChatRoom[]> {
-    return this.chatRoomModel.find({ participants: userId }).exec();
+    console.log('Getting chat rooms for user:', userId);
+
+    // Convert userId to ObjectId if needed
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    const basicRooms = await this.chatRoomModel
+      .find({ participants: userObjectId })
+      .lean()
+      .exec();
+
+    console.log('Basic rooms (without population):', basicRooms);
+
+    const rooms = await this.chatRoomModel
+      .find({ participants: userObjectId })
+      .populate({
+        path: 'participants',
+        match: { _id: { $ne: userObjectId } },
+        select: 'username profilePic',
+        model: 'User',
+      })
+      .lean()
+      .exec();
+
+    console.log('Rooms after population:', rooms);
+
+    if (rooms.length === 0) {
+      return [];
+    }
+
+    // Fetch last message for each room
+    const roomsWithLastMessage = await Promise.all(
+      rooms.map(async (room) => {
+        const lastMessage = await this.messageModel
+          .findOne({ roomId: room.roomId })
+          .sort({ timestamp: -1 })
+          .lean()
+          .exec();
+
+        console.log(`Last message for room ${room.roomId}:`, lastMessage);
+
+        return {
+          ...room,
+          lastMessage,
+        };
+      }),
+    );
+
+    console.log('Final rooms with messages:', roomsWithLastMessage);
+    return roomsWithLastMessage;
   }
 }
