@@ -31,6 +31,7 @@ export class UserBooksService {
     @InjectConnection() private connection: Connection,
   ) {}
 
+  // CRUD Operations
   public async createUserBook(user_id: string, book: createBookDto) {
     const book_id = await this.bookService.createBook(book);
 
@@ -44,77 +45,61 @@ export class UserBooksService {
     return newUserBook.populate(['book', 'owner']);
   }
 
+  public async deleteUserBook(user_id: string, userbook_id: string) {
+    const userBook = await this.userBooksModel.findOne({
+      _id: userbook_id,
+      owner: user_id,
+    });
+
+    if (!userBook) {
+      throw new NotFoundException('UserBook not found or unauthorized');
+    }
+
+    // Check if book has active requests
+    const activeRequests = await this.bookRequestModel.find({
+      userBook: userbook_id,
+      status: {
+        $nin: [bookRequestStatus.RETURNED, bookRequestStatus.CHECKED_IN],
+      },
+    });
+
+    if (activeRequests.length > 0) {
+      throw new ConflictException('Cannot delete book with active requests');
+    }
+
+    const session = await this.connection.startSession();
+
+    const result = await this.withTransaction(session, async (_session) => {
+      // Delete completed requests
+      await this.bookRequestModel.deleteMany(
+        {
+          userBook: userbook_id,
+          status: {
+            $in: [bookRequestStatus.RETURNED, bookRequestStatus.CHECKED_IN],
+          },
+        },
+        { session: _session },
+      );
+
+      await userBook.deleteOne({ session: _session });
+
+      return { message: 'UserBook successfully deleted' };
+    });
+
+    session.endSession();
+    return result;
+  }
+
+  // Request Operations
   public async getBookRequest(request_id: string) {
     return this.bookRequestModel.findById(request_id, null, {
       populate: { path: 'userBook', populate: 'book' },
     });
   }
 
-  private async doesRequestExist(user_id: string, userBook_id: string) {
-    const isExistingUser = await this.bookRequestModel.findOne({
-      $and: [{ sender: user_id }, { userBook: userBook_id }],
-    });
-    return isExistingUser;
-  }
-
-  private async createNewRequest(
-    sender_id: string,
-    userBook_id: string,
-    session,
-  ) {
-    const senderAsObjectId = new Types.ObjectId(sender_id);
-    const userBookAsObjectId = new Types.ObjectId(userBook_id);
-    const newBookRequest = new this.bookRequestModel({
-      sender: senderAsObjectId,
-      userBook: userBookAsObjectId,
-    });
-    return newBookRequest.save({ session });
-  }
-
-  public async deleteBookRequest(request_id: string, user_id: string) {
-    const bookRequest = await this.bookRequestModel
-      .findById(request_id)
-      .populate('userBook');
-
-    console.log('bookRequest', bookRequest);
-
-    if (!bookRequest) {
-      throw new NotFoundException('Book request not found');
-    }
-
-    // Check if user is authorized to delete the request
-    if (
-      bookRequest.sender.toString() !== user_id &&
-      bookRequest.userBook.owner.toString() !== user_id
-    ) {
-      throw new UnauthorizedException('Not authorized to delete this request');
-    }
-
-    const session = await this.connection.startSession();
-
-    try {
-      const result = await this.withTransaction(session, async (_session) => {
-        //Remove request reference from userBook
-        await this.userBooksModel.updateOne(
-          { _id: bookRequest.userBook },
-          { $pull: { requests: request_id } },
-          { session: _session },
-        );
-
-        await bookRequest.deleteOne({ session: _session });
-
-        return { message: 'Book request successfully deleted' };
-      });
-
-      return result;
-    } finally {
-      session.endSession();
-    }
-  }
-
   public async createBookRequest(user_id: string, userBook_id: string) {
     const user = await this.doesRequestExist(user_id, userBook_id);
-    if (user) {
+    if (user && user.status !== bookRequestStatus.CANCELED_BY_SENDER) {
       throw new ConflictException(`book request from user: ${user_id} exist!`);
     }
 
@@ -154,21 +139,11 @@ export class UserBooksService {
           throw new NotFoundException('UserBook not found');
         }
 
-        const notificationPayload = {
-          requestPayload: {
-            requestType: requestTypeEnum['BookRequest'],
-            requestRef: newBookRequest._id.toString(),
-          },
-          sender: {
-            _id: user_id.toString(),
-            message: `You made a book request for ${userBook.book.title}`,
-          },
-          recipient: {
-            _id: userBook.owner._id.toString(),
-            message: `You have a book request for ${userBook.book.title}`,
-            confirmation: `Accept the book request for ${userBook.book.title}?`,
-          },
-        };
+        const notificationPayload = await this.getPayloadFromBookRequest(
+          newBookRequest,
+        );
+
+        console.log('notificationPayload', notificationPayload);
 
         const [newNotification] =
           await this.notificationsService.createNotificationForTwoUsers(
@@ -181,6 +156,47 @@ export class UserBooksService {
           notification: await newNotification.populate('user'),
         });
       });
+      return result;
+    } finally {
+      session.endSession();
+    }
+  }
+
+  public async deleteBookRequest(request_id: string, user_id: string) {
+    const bookRequest = await this.bookRequestModel
+      .findById(request_id)
+      .populate('userBook');
+
+    console.log('bookRequest', bookRequest);
+
+    if (!bookRequest) {
+      throw new NotFoundException('Book request not found');
+    }
+
+    // Check if user is authorized to delete the request
+    if (
+      bookRequest.sender.toString() !== user_id &&
+      bookRequest.userBook.owner.toString() !== user_id
+    ) {
+      throw new UnauthorizedException('Not authorized to delete this request');
+    }
+
+    const session = await this.connection.startSession();
+
+    try {
+      const result = await this.withTransaction(session, async (_session) => {
+        //Remove request reference from userBook
+        await this.userBooksModel.updateOne(
+          { _id: bookRequest.userBook },
+          { $pull: { requests: request_id } },
+          { session: _session },
+        );
+
+        await bookRequest.deleteOne({ session: _session });
+
+        return { message: 'Book request successfully deleted' };
+      });
+
       return result;
     } finally {
       session.endSession();
@@ -357,7 +373,7 @@ export class UserBooksService {
     return await bookRequest.save();
   }
 
-  private async getPayloadFromBookRequest(
+  public async getPayloadFromBookRequest(
     bookRequest: BookRequestDocument,
     optionalStatus: string = null,
   ) {
@@ -388,10 +404,80 @@ export class UserBooksService {
     };
   }
 
+  // Utility Operations
+  public async checkDueBooks() {
+    const now = new Date();
+    const threeDaysBefore = new Date(now);
+    threeDaysBefore.setHours(0, 0, 0, 0);
+    threeDaysBefore.setDate(now.getDate() + 3);
+
+    const session = await this.connection.startSession();
+
+    try {
+      await this.withTransaction(session, async (_session) => {
+        const dueRequests = await this.bookRequestModel
+          .find({
+            status: bookRequestStatus.CHECKED_OUT,
+            dueDate: { $lte: threeDaysBefore },
+          })
+          .populate({
+            path: 'userBook',
+            populate: { path: 'book', select: 'title' },
+          });
+
+        for (const request of dueRequests) {
+          if (!request.dueDate) continue;
+
+          const daysUntilDue = Math.ceil(
+            (request.dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24),
+          );
+
+          let notificationType;
+          if (daysUntilDue <= 0) {
+            notificationType = bookRequestStatus.IS_DUE;
+          } else if (daysUntilDue === 1) {
+            notificationType = dueStatus.DUE_TOMORROW;
+          } else if (daysUntilDue <= 3) {
+            notificationType = dueStatus.DUE_SOON;
+          }
+
+          if (notificationType) {
+            try {
+              const notificationPayload = await this.getPayloadFromBookRequest(
+                request,
+                notificationType,
+              );
+              await this.notificationsService.createNotificationForTwoUsers(
+                notificationPayload,
+                _session,
+              );
+            } catch (error) {
+              console.error(
+                `Failed to create notification for request ${request._id}:`,
+                error,
+              );
+            }
+          }
+        }
+      });
+    } finally {
+      session.endSession();
+    }
+  }
+
   private getUserBookNotificationPayload(status, title, dueDate) {
     let sender, recipient;
 
     switch (status) {
+      case bookRequestStatus.CHECKED_IN:
+        sender = {
+          message: `You made a book request for ${title}`,
+        };
+        recipient = {
+          message: `You have a book request for ${title}`,
+          confirmation: `Accept the book request for ${title}?`,
+        };
+        break;
       case bookRequestStatus.ACCEPTED:
         sender = {
           message: `Your book request for "${title}" was accepted! Waiting for dropoff`,
@@ -499,6 +585,28 @@ export class UserBooksService {
     return [sender, recipient];
   }
 
+  // Private Helper Methods
+  private async doesRequestExist(user_id: string, userBook_id: string) {
+    const isExistingUser = await this.bookRequestModel.findOne({
+      $and: [{ sender: user_id }, { userBook: userBook_id }],
+    });
+    return isExistingUser;
+  }
+
+  private async createNewRequest(
+    sender_id: string,
+    userBook_id: string,
+    session,
+  ) {
+    const senderAsObjectId = new Types.ObjectId(sender_id);
+    const userBookAsObjectId = new Types.ObjectId(userBook_id);
+    const newBookRequest = new this.bookRequestModel({
+      sender: senderAsObjectId,
+      userBook: userBookAsObjectId,
+    });
+    return newBookRequest.save({ session });
+  }
+
   private async withTransaction(session, closure) {
     let result;
     await session.withTransaction(async () => {
@@ -506,112 +614,5 @@ export class UserBooksService {
       return result;
     });
     return result;
-  }
-
-  public async deleteUserBook(user_id: string, userbook_id: string) {
-    const userBook = await this.userBooksModel.findOne({
-      _id: userbook_id,
-      owner: user_id,
-    });
-
-    if (!userBook) {
-      throw new NotFoundException('UserBook not found or unauthorized');
-    }
-
-    // Check if book has active requests
-    const activeRequests = await this.bookRequestModel.find({
-      userBook: userbook_id,
-      status: {
-        $nin: [bookRequestStatus.RETURNED, bookRequestStatus.CHECKED_IN],
-      },
-    });
-
-    if (activeRequests.length > 0) {
-      throw new ConflictException('Cannot delete book with active requests');
-    }
-
-    const session = await this.connection.startSession();
-
-    const result = await this.withTransaction(session, async (_session) => {
-      // Delete completed requests
-      await this.bookRequestModel.deleteMany(
-        {
-          userBook: userbook_id,
-          status: {
-            $in: [bookRequestStatus.RETURNED, bookRequestStatus.CHECKED_IN],
-          },
-        },
-        { session: _session },
-      );
-
-      await userBook.deleteOne({ session: _session });
-
-      return { message: 'UserBook successfully deleted' };
-    });
-
-    session.endSession();
-    return result;
-  }
-
-  // ... existing code ...
-
-  public async checkDueBooks() {
-    const now = new Date();
-    const threeDaysBefore = new Date(now);
-    threeDaysBefore.setHours(0, 0, 0, 0);
-    threeDaysBefore.setDate(now.getDate() + 3);
-
-    const session = await this.connection.startSession();
-
-    try {
-      await this.withTransaction(session, async (_session) => {
-        const dueRequests = await this.bookRequestModel
-          .find({
-            status: bookRequestStatus.CHECKED_OUT,
-            dueDate: { $lte: threeDaysBefore },
-          })
-          .populate({
-            path: 'userBook',
-            populate: { path: 'book', select: 'title' },
-          });
-
-        for (const request of dueRequests) {
-          if (!request.dueDate) continue;
-
-          const daysUntilDue = Math.ceil(
-            (request.dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24),
-          );
-
-          let notificationType;
-          if (daysUntilDue <= 0) {
-            notificationType = bookRequestStatus.IS_DUE;
-          } else if (daysUntilDue === 1) {
-            notificationType = dueStatus.DUE_TOMORROW;
-          } else if (daysUntilDue <= 3) {
-            notificationType = dueStatus.DUE_SOON;
-          }
-
-          if (notificationType) {
-            try {
-              const notificationPayload = await this.getPayloadFromBookRequest(
-                request,
-                notificationType,
-              );
-              await this.notificationsService.createNotificationForTwoUsers(
-                notificationPayload,
-                _session,
-              );
-            } catch (error) {
-              console.error(
-                `Failed to create notification for request ${request._id}:`,
-                error,
-              );
-            }
-          }
-        }
-      });
-    } finally {
-      session.endSession();
-    }
   }
 }
