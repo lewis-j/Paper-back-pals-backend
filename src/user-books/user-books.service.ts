@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Model, Types, Connection } from 'mongoose';
+import { Model, Types, Connection, ClientSession } from 'mongoose';
 import { UserBooks, UserBooksDocument } from './schema/userbooks.schema';
 import { BooksService } from 'src/books/books.service';
 import { createBookDto } from 'src/books/dto/createBookDto';
@@ -98,33 +98,52 @@ export class UserBooksService {
   }
 
   public async createBookRequest(user_id: string, userBook_id: string) {
-    const user = await this.doesRequestExist(user_id, userBook_id);
-    if (user && user.status !== bookRequestStatus.CANCELED_BY_SENDER) {
-      throw new ConflictException(`book request from user: ${user_id} exist!`);
+    const existingRequest = await this.doesRequestExist(user_id, userBook_id);
+
+    // If there's an existing active request that's not RETURNED
+    if (
+      existingRequest &&
+      existingRequest.status !== bookRequestStatus.RETURNED
+    ) {
+      if (existingRequest.status === bookRequestStatus.CANCELED_BY_SENDER) {
+        // Reuse canceled request by resetting its status
+        existingRequest.status = bookRequestStatus.CHECKED_IN;
+        return this.processBookRequest(existingRequest, userBook_id);
+      } else {
+        // Other active request exists
+        console.log(`book request from user: ${user_id} exists!`);
+        throw new ConflictException(
+          `book request from user: ${user_id} exists!`,
+        );
+      }
     }
 
+    // Create new request for RETURNED status or no existing request
+    const newBookRequest = await this.createNewRequest(user_id, userBook_id);
+    return this.processBookRequest(newBookRequest, userBook_id);
+  }
+
+  private async processBookRequest(
+    bookRequest: BookRequestDocument,
+    userBook_id: string,
+  ) {
     const session = await this.connection.startSession();
 
     try {
       const result = await this.withTransaction(session, async (_session) => {
-        const newBookRequest = await this.createNewRequest(
-          user_id,
-          userBook_id,
-          _session,
-        );
+        const savedRequest = await bookRequest.save({ session: _session });
 
         const populateOptionsWithSender = {
           ...bookRequestPopulateOptions,
           select: `${bookRequestPopulateOptions.select} sender`,
         };
 
-        await newBookRequest.populate(populateOptionsWithSender);
-        console.log('newBookRequest', newBookRequest);
-        const transformedRequest = transformBookRequest(newBookRequest);
+        await savedRequest.populate(populateOptionsWithSender);
+        const transformedRequest = transformBookRequest(savedRequest);
 
         const userBook = await this.userBooksModel.findOneAndUpdate(
           { _id: userBook_id },
-          { $push: { requests: newBookRequest._id } },
+          { $push: { requests: savedRequest._id } },
           {
             runValidators: true,
             session: _session,
@@ -140,10 +159,8 @@ export class UserBooksService {
         }
 
         const notificationPayload = await this.getPayloadFromBookRequest(
-          newBookRequest,
+          savedRequest,
         );
-
-        console.log('notificationPayload', notificationPayload);
 
         const [newNotification] =
           await this.notificationsService.createNotificationForTwoUsers(
@@ -151,15 +168,24 @@ export class UserBooksService {
             _session,
           );
 
-        return Promise.resolve({
+        return {
           bookRequest: transformedRequest,
           notification: await newNotification.populate('user'),
-        });
+        };
       });
       return result;
     } finally {
       session.endSession();
     }
+  }
+
+  private async createNewRequest(sender_id: string, userBook_id: string) {
+    const senderAsObjectId = new Types.ObjectId(sender_id);
+    const userBookAsObjectId = new Types.ObjectId(userBook_id);
+    return new this.bookRequestModel({
+      sender: senderAsObjectId,
+      userBook: userBookAsObjectId,
+    });
   }
 
   public async deleteBookRequest(request_id: string, user_id: string) {
@@ -591,20 +617,6 @@ export class UserBooksService {
       $and: [{ sender: user_id }, { userBook: userBook_id }],
     });
     return isExistingUser;
-  }
-
-  private async createNewRequest(
-    sender_id: string,
-    userBook_id: string,
-    session,
-  ) {
-    const senderAsObjectId = new Types.ObjectId(sender_id);
-    const userBookAsObjectId = new Types.ObjectId(userBook_id);
-    const newBookRequest = new this.bookRequestModel({
-      sender: senderAsObjectId,
-      userBook: userBookAsObjectId,
-    });
-    return newBookRequest.save({ session });
   }
 
   private async withTransaction(session, closure) {
