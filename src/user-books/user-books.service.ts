@@ -107,7 +107,9 @@ export class UserBooksService {
     ) {
       if (existingRequest.status === bookRequestStatus.CANCELED_BY_SENDER) {
         // Reuse canceled request by resetting its status
-        existingRequest.status = bookRequestStatus.CHECKED_IN;
+        existingRequest.updateStatus({
+          status: bookRequestStatus.CHECKED_IN,
+        });
         return this.processBookRequest(existingRequest, userBook_id);
       } else {
         // Other active request exists
@@ -176,6 +178,70 @@ export class UserBooksService {
       return result;
     } finally {
       session.endSession();
+    }
+  }
+
+  public async requestReturn(
+    request_id: string,
+    user_id: string,
+    status: string,
+  ) {
+    try {
+      console.log('request return service');
+      const bookRequest = (await this.bookRequestModel
+        .findOne({ _id: request_id })
+        .populate({
+          path: 'userBook',
+          select: 'owner',
+        })
+        .lean(false)
+        .exec()) as BookRequestDocument;
+
+      if (!bookRequest) {
+        console.log('Book request not found');
+        throw new NotFoundException('Book request not found');
+      }
+
+      if (bookRequest.status !== bookRequestStatus.CHECKED_OUT) {
+        console.log(
+          'Book request is not in the CHECKED_OUT status',
+          bookRequest.status,
+        );
+        throw new BadRequestException(
+          'Book request is not in the CHECKED_OUT status',
+        );
+      }
+
+      if (bookRequest.userBook.owner.toString() !== user_id) {
+        console.log('Only the Lender can request a return');
+        throw new UnauthorizedException('Only the Lender can request a return');
+      }
+
+      bookRequest.updateStatus({
+        status: bookRequestStatus.RETURN_REQUESTED,
+      });
+
+      const request = await bookRequest.save();
+      const notificationPayload = await this.getPayloadFromBookRequest(request);
+
+      const [senderNotification, recipientNotification] =
+        await this.notificationsService.createNotificationForTwoUsers(
+          notificationPayload,
+          null,
+        );
+      return {
+        bookRequest: request,
+        notification: await senderNotification.populate('user'),
+      };
+    } catch (error) {
+      console.log('error', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to process return request');
     }
   }
 
@@ -289,7 +355,8 @@ export class UserBooksService {
   public async declineBookRequest(request_id: string, user_id: string) {
     const bookRequest = await this.bookRequestModel
       .findById(request_id)
-      .populate('userBook');
+      .populate('userBook')
+      .exec();
 
     if (!bookRequest) {
       throw new NotFoundException('Book request not found');
@@ -302,7 +369,9 @@ export class UserBooksService {
       );
     }
 
-    bookRequest.status = bookRequestStatus.DECLINED_BY_OWNER;
+    bookRequest.updateStatus({
+      status: bookRequestStatus.DECLINED_BY_OWNER,
+    });
     const userBook = await this.userBooksModel.findById(bookRequest.userBook);
     userBook.requests = userBook.requests.filter(
       (request) => request.toString() !== request_id,
@@ -339,7 +408,7 @@ export class UserBooksService {
   }
 
   public async cancelBookRequest(request_id: string, user_id: string) {
-    const bookRequest = await this.bookRequestModel.findById(request_id);
+    const bookRequest = await this.bookRequestModel.findById(request_id).exec();
 
     if (!bookRequest) {
       throw new NotFoundException('Book request not found');
@@ -352,7 +421,9 @@ export class UserBooksService {
       );
     }
 
-    bookRequest.status = bookRequestStatus.CANCELED_BY_SENDER;
+    bookRequest.updateStatus({
+      status: bookRequestStatus.CANCELED_BY_SENDER,
+    });
     const userBook = await this.userBooksModel.findById(bookRequest.userBook);
     userBook.requests = userBook.requests.filter(
       (request) => request.toString() !== request_id,
@@ -604,6 +675,24 @@ export class UserBooksService {
         };
         break;
 
+      case bookRequestStatus.RETURN_REQUESTED:
+        sender = {
+          message: `You requested "${title}" to be returned`,
+        };
+        recipient = {
+          message: `The owner has requested "${title}" to be returned`,
+        };
+        break;
+
+      case 'RETURN_REQUEST_CANCELED':
+        sender = {
+          message: `You canceled the return request for "${title}"`,
+        };
+        recipient = {
+          message: `The return request for "${title}" was canceled by the owner`,
+        };
+        break;
+
       default:
         throw new Error(`Unhandled book request status: ${status}`);
     }
@@ -626,5 +715,73 @@ export class UserBooksService {
       return result;
     });
     return result;
+  }
+
+  public async cancelReturnRequest(
+    request_id: string,
+    user_id: string,
+    status: string,
+  ) {
+    try {
+      console.log('cancel return request service');
+      const bookRequest = await this.bookRequestModel
+        .findById(request_id)
+        .populate({
+          path: 'userBook',
+          select: 'owner',
+        })
+        .exec();
+
+      if (!bookRequest) {
+        console.log('Book request not found');
+        throw new NotFoundException('Book request not found');
+      }
+
+      if (bookRequest.status !== bookRequestStatus.RETURN_REQUESTED) {
+        console.log(
+          'Book request is not in the RETURN_REQUESTED status',
+          bookRequest.status,
+        );
+        throw new BadRequestException(
+          'Book request is not in the RETURN_REQUESTED status',
+        );
+      }
+
+      if (bookRequest.userBook.owner.toString() !== user_id) {
+        console.log('Only the Lender can cancel a return request');
+        throw new UnauthorizedException(
+          'Only the Lender can cancel a return request',
+        );
+      }
+
+      bookRequest.updateStatus({
+        status: bookRequestStatus.CHECKED_OUT,
+      });
+
+      const request = await bookRequest.save();
+      const notificationPayload = await this.getPayloadFromBookRequest(
+        request,
+        'RETURN_REQUEST_CANCELED',
+      );
+
+      const [senderNotification, recipientNotification] =
+        await this.notificationsService.createNotificationForTwoUsers(
+          notificationPayload,
+          null,
+        );
+      return {
+        bookRequest: request,
+        notification: await senderNotification.populate('user'),
+      };
+    } catch (error) {
+      console.log('error', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to cancel return request');
+    }
   }
 }

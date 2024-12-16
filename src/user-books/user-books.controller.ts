@@ -46,10 +46,8 @@ export class UserBooksController {
   async createBookRequest(@Request() req: RequestWithUID, @Body() body: any) {
     const { user_id } = req.user;
     const { userBook_id } = body;
-    console.log('create book request', user_id, userBook_id);
     const { bookRequest, notification } =
       await this.userBooksService.createBookRequest(user_id, userBook_id);
-    console.log('bookRequest', bookRequest);
     return { bookRequest, notification };
   }
   @Put('request/:id/status/next')
@@ -61,6 +59,42 @@ export class UserBooksController {
     const { user_id } = req.user;
     const { status } = body;
     return await this.userBooksService.nextRequestStatus(
+      request_id,
+      user_id,
+      status,
+    );
+  }
+  @Put('request/:id/status/return')
+  async requestReturn(
+    @Param('id') request_id,
+    @Request() req: RequestWithUID,
+    @Body() body,
+  ) {
+    const { user_id } = req.user;
+    const { status } = body;
+    console.log('request return');
+    console.log('request_id', request_id);
+    console.log('user_id', user_id);
+    console.log('status', status);
+    return await this.userBooksService.requestReturn(
+      request_id,
+      user_id,
+      status,
+    );
+  }
+  @Put('request/:id/status/return/cancel')
+  async cancelReturnRequest(
+    @Param('id') request_id,
+    @Request() req: RequestWithUID,
+    @Body() body,
+  ) {
+    const { user_id } = req.user;
+    const { status } = body;
+    console.log('request return');
+    console.log('request_id', request_id);
+    console.log('user_id', user_id);
+    console.log('status', status);
+    return await this.userBooksService.cancelReturnRequest(
       request_id,
       user_id,
       status,

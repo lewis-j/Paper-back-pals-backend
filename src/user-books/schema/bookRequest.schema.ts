@@ -9,19 +9,27 @@ import { User } from 'src/user/schema/user.schema';
 import { Transform, Type } from 'class-transformer';
 import { status } from './status-enums';
 
-export type BookRequestDocument = BookRequest & Document;
+export interface StatusUpdateOptions {
+  status: string;
+  imageUrl?: string;
+}
 
-// Add new interface for status history
 interface StatusHistory {
   status: string;
   timestamp: Date;
   imageUrl?: string;
 }
 
-interface StatusUpdateOptions {
+export interface BookRequestDocument extends Document {
+  _id: string;
+  userBook: UserBooks;
+  sender: User;
   status: string;
-  imageUrl?: string;
-  // You can add other metadata here in the future
+  statusHistory: StatusHistory[];
+  currentPage: number;
+  dueDate: Date;
+  pictureRequired: boolean;
+  updateStatus(options: StatusUpdateOptions): void;
 }
 
 @SchemaDecorator({ timestamps: true })
@@ -65,30 +73,31 @@ export class BookRequest {
 
   @Prop({ type: Boolean, default: false })
   pictureRequired: boolean;
-
-  // Add a method to update status with metadata
-  updateStatus(options: StatusUpdateOptions) {
-    if (this.pictureRequired && !options.imageUrl) {
-      throw new Error('Image is required for status updates on this request');
-    }
-
-    this.status = options.status;
-
-    const statusEntry: StatusHistory = {
-      status: options.status,
-      timestamp: new Date(),
-    };
-
-    if (options.imageUrl) {
-      statusEntry.imageUrl = options.imageUrl;
-    }
-
-    if (!this.statusHistory) {
-      this.statusHistory = [];
-    }
-
-    this.statusHistory.push(statusEntry);
-  }
 }
 
 export const BookRequestSchema = SchemaFactory.createForClass(BookRequest);
+
+BookRequestSchema.methods.updateStatus = function (
+  options: StatusUpdateOptions,
+) {
+  if (this.pictureRequired && !options.imageUrl) {
+    throw new Error('Image is required for status updates on this request');
+  }
+
+  this.status = options.status;
+
+  const statusEntry: StatusHistory = {
+    status: options.status,
+    timestamp: new Date(),
+  };
+
+  if (options.imageUrl) {
+    statusEntry.imageUrl = options.imageUrl;
+  }
+
+  if (!this.statusHistory) {
+    this.statusHistory = [];
+  }
+
+  this.statusHistory.push(statusEntry);
+};
