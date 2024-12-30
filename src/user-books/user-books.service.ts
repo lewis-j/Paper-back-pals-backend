@@ -332,13 +332,21 @@ export class UserBooksService {
         await this.notificationsService.createNotificationForTwoUsers(
           notificationPayload,
         );
+      console.log(
+        'is borrower?',
+        _bookRequest.sender._id.toString() === user_id,
+        _bookRequest.sender._id.toString(),
+        user_id,
+      );
 
-      if (_bookRequest.sender._id.toString() === user_id)
+      if (_bookRequest.sender._id.toString() === user_id) {
+        console.log('is borrower', senderNotification);
         return {
           notification: await senderNotification.populate('user'),
           bookRequest: _bookRequest,
         };
-
+      }
+      console.log('is lender', recipientNotification);
       return {
         notification: await recipientNotification.populate('user'),
         bookRequest: _bookRequest,
@@ -474,14 +482,16 @@ export class UserBooksService {
       populate: { path: 'book', select: 'title' },
       select: 'book owner',
     });
+    const status = optionalStatus ?? bookRequest.status;
 
     const { userBook } = bookRequest;
     const requestPayload = {
       requestType: requestTypeEnum['BookRequest'],
       requestRef: bookRequest._id.toString(),
+      status,
     };
     const [sender, recipient] = this.getUserBookNotificationPayload(
-      optionalStatus ?? bookRequest.status,
+      status,
       userBook.book.title,
       bookRequest.dueDate,
     );

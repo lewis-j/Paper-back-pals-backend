@@ -1,7 +1,10 @@
+import { NotificationStatus } from '../schema/Notification.types';
+
 interface CreateNotifications {
   sender: UserPayload;
   recipient: UserPayload;
   requestPayload: RequestPayload;
+  status?: NotificationStatus;
 }
 
 interface UserPayload {

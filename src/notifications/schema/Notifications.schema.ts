@@ -1,6 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
+import { friendRequestStatus } from 'src/friends/schema/friend-request-status';
+import { bookRequestStatus } from 'src/user-books/schema/status-enums';
 import { User } from 'src/user/schema/user.schema';
+import { NotificationStatus } from './Notification.types';
+
+// Define a combined status type
 
 export interface NotificationsDocument
   extends Notifications,
@@ -44,6 +49,15 @@ export class Notifications {
     refPath: 'requestType',
   })
   requestRef: mongoose.Types.ObjectId;
+
+  @Prop({
+    required: false,
+    enum: [
+      ...Object.values(bookRequestStatus),
+      ...Object.values(friendRequestStatus),
+    ],
+  })
+  status?: NotificationStatus;
 }
 
 export const NotificationsSchema = SchemaFactory.createForClass(Notifications);
