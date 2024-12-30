@@ -23,6 +23,7 @@ export class NotificationsController {
     const notifications = await this.notificationServices.getNotifications(
       user_id,
     );
+    console.log('notifications', notifications);
     return notifications;
   }
   @Put('isRead/:id')
@@ -32,5 +33,13 @@ export class NotificationsController {
       notification_id,
     );
     return { notification };
+  }
+  @Put('markAllAsRead')
+  async markAllAsRead(@Request() req: RequestWithUID) {
+    const { user_id } = req.user;
+    const notifications = await this.notificationServices.markAllAsRead(
+      user_id,
+    );
+    return { notifications };
   }
 }

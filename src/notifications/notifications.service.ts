@@ -7,6 +7,14 @@ import {
   NotificationsDocument,
 } from './schema/Notifications.schema';
 import CreateNotifications from './interface/CreateNotifications.interface';
+import { BookRequest } from 'src/user-books/schema/bookRequest.schema';
+import { FriendRequest } from 'src/friends/schema/friendRequest.schema';
+import { notificationQueryOptions } from 'src/util/query.utils';
+
+interface PopulatedNotification
+  extends Omit<NotificationsDocument, 'requestRef'> {
+  requestRef: BookRequest | FriendRequest | Types.ObjectId;
+}
 
 @Injectable()
 export class NotificationsService {
@@ -16,7 +24,6 @@ export class NotificationsService {
   ) {}
   public async createNotificationForTwoUsers(
     notificationsData: CreateNotifications,
-    session: ClientSession,
   ) {
     const {
       sender: { _id: sender_id, ...senderPayload },
@@ -27,22 +34,25 @@ export class NotificationsService {
     const recipientAsObjectId = new Types.ObjectId(recipient_id);
 
     try {
-      return await this.notificationsModel.create(
-        [
-          {
-            ...requestPayload,
-            ...senderPayload,
-            user: recipientAsObjectId,
-            recipient: senderAsObjectId,
-          },
-          {
-            ...requestPayload,
-            ...recipientPayload,
-            user: senderAsObjectId,
-            recipient: recipientAsObjectId,
-          },
-        ],
-        { session: session },
+      const notifications = await this.notificationsModel.create([
+        {
+          ...requestPayload,
+          ...senderPayload,
+          user: recipientAsObjectId,
+          recipient: senderAsObjectId,
+        },
+        {
+          ...requestPayload,
+          ...recipientPayload,
+          user: senderAsObjectId,
+          recipient: recipientAsObjectId,
+        },
+      ]);
+
+      return await this.notificationsModel.find(
+        { _id: { $in: notifications.map((n) => n._id) } },
+        null,
+        { ...notificationQueryOptions },
       );
     } catch (error) {
       return Promise.reject(error);
@@ -74,6 +84,7 @@ export class NotificationsService {
 
   public async getNotifications(user_id: string) {
     // Get all unread notifications
+
     const unreadNotifications = await this.notificationsModel.find(
       {
         recipient: user_id,
@@ -81,12 +92,7 @@ export class NotificationsService {
       },
       null,
       {
-        sort: '-createdAt',
-        populate: {
-          path: 'user',
-          select: 'profilePic username',
-        },
-        select: '-updatedAt -recipient',
+        ...notificationQueryOptions,
       },
     );
 
@@ -97,20 +103,38 @@ export class NotificationsService {
         isRead: true,
       },
       null,
-      {
-        sort: '-createdAt',
-        limit: 10,
-        populate: {
-          path: 'user',
-          select: 'profilePic username',
-        },
-        select: '-updatedAt -recipient',
+      { ...notificationQueryOptions, limit: 10 },
+    );
+    const processedUnreadNotifications = unreadNotifications.map(
+      (notification: PopulatedNotification) => {
+        const processed = { ...notification.toObject() };
+
+        // Check if requestRef exists and is populated (not an ObjectId)
+        const isPopulated =
+          notification.requestRef && !('_bsontype' in notification.requestRef);
+
+        if (isPopulated) {
+          const ref = notification.requestRef as BookRequest | FriendRequest;
+          processed.requestRef = {
+            _id: ref._id,
+            ...(ref.status && { status: ref.status }),
+          };
+        }
+
+        return processed;
       },
     );
 
     // Combine and sort both arrays
-    return [...unreadNotifications, ...readNotifications].sort(
+    return [...processedUnreadNotifications, ...readNotifications].sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
+  }
+
+  public async markAllAsRead(user_id: string) {
+    return this.notificationsModel.updateMany(
+      { recipient: user_id },
+      { isRead: true },
     );
   }
 }

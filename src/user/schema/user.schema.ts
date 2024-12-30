@@ -14,6 +14,8 @@ import {
   bookRequestPopulateOptions,
   transformBookRequest,
 } from 'src/util/populate.utils';
+import { friendRequestStatus } from 'src/friends/schema/friend-request-status';
+import { bookRequestStatus } from 'src/user-books/schema/status-enums';
 
 export type UserDocument = User & Document;
 
@@ -111,11 +113,21 @@ const populateUser = async (findFunc) => {
       },
       {
         path: 'friendRequestOutbox',
+        match: {
+          status: {
+            $nin: [friendRequestStatus.ACCEPTED, friendRequestStatus.DECLINED],
+          },
+        },
         populate: { path: 'recipient', select: '_id username profilePic' },
         select: 'recipient -sender',
       },
       {
         path: 'friendRequestInbox',
+        match: {
+          status: {
+            $nin: [friendRequestStatus.ACCEPTED, friendRequestStatus.DECLINED],
+          },
+        },
         populate: {
           path: 'sender',
           select: '_id username profilePic',
@@ -130,11 +142,21 @@ const populateUser = async (findFunc) => {
           },
           {
             path: 'requests',
+            match: {
+              status: {
+                $nin: [
+                  bookRequestStatus.RETURNED,
+                  bookRequestStatus.RETURN_REQUESTED,
+                  bookRequestStatus.DECLINED_BY_OWNER,
+                  bookRequestStatus.CANCELED_BY_SENDER,
+                ],
+              },
+            },
             select: '_id status dueDate currentPage createdAt',
             populate: { path: 'sender', select: '_id' },
           },
         ],
-        select: 'book requests -owner', // Include fields you want and exclude owner
+        select: 'book requests -owner',
       },
       {
         path: 'borrowedBooks',
@@ -154,7 +176,7 @@ const populateUser = async (findFunc) => {
 UserSchema.static('getAuthUser', async function (user_id: string) {
   return await populateUser(this.findById(user_id));
 });
-
+//they should all have a firebase_id
 UserSchema.static('getFireUser', async function (firebase_id: string) {
   console.log('getFireUser', firebase_id);
   return await populateUser(this.findOne({ firebase_id: firebase_id }));

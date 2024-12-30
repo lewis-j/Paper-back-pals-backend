@@ -1,4 +1,4 @@
-export const status = {
+export const bookRequestStatus = {
   CHECKED_IN: 'CHECKED_IN',
   ACCEPTED: 'ACCEPTED',
   SENDING: 'SENDING',
@@ -9,9 +9,12 @@ export const status = {
   RETURN_REQUESTED: 'RETURN_REQUESTED',
   DECLINED_BY_OWNER: 'DECLINED_BY_OWNER',
   CANCELED_BY_SENDER: 'CANCELED_BY_SENDER',
-};
+} as const;
 
 export const dueStatus = {
   DUE_TOMORROW: 'DUE_TOMORROW',
   DUE_SOON: 'DUE_SOON',
 };
+
+export type BookRequestStatus =
+  typeof bookRequestStatus[keyof typeof bookRequestStatus];

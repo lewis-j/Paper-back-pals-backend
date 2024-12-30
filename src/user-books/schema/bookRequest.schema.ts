@@ -7,7 +7,7 @@ import { Document, Schema } from 'mongoose';
 import { UserBooks } from 'src/user-books/schema/userbooks.schema';
 import { User } from 'src/user/schema/user.schema';
 import { Transform, Type } from 'class-transformer';
-import { status } from './status-enums';
+import { bookRequestStatus, BookRequestStatus } from './status-enums';
 
 export interface StatusUpdateOptions {
   status: string;
@@ -50,12 +50,16 @@ export class BookRequest {
   @Type(() => User)
   sender: User;
 
-  @Prop({ type: String, enum: status, default: 'CHECKED_IN' })
-  status: string;
+  @Prop({
+    type: String,
+    enum: Object.values(bookRequestStatus),
+    default: bookRequestStatus.CHECKED_IN,
+  })
+  status: BookRequestStatus;
 
   @Prop([
     {
-      status: { type: String, enum: status },
+      status: { type: String, enum: Object.values(bookRequestStatus) },
       timestamp: { type: Date, default: Date.now },
       imageUrl: { type: String, required: false },
     },

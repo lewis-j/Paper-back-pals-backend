@@ -21,14 +21,14 @@ export class UserService {
 
   async upsertFireUser(firebaseUser: GoogleUserDto) {
     const { firebase_id: id } = firebaseUser;
-    console.log('upsertFireUser', firebaseUser);
     try {
       const existingUser = await this.userModel.getFireUser(id);
       if (existingUser) return { user: existingUser, statusCode: 200 };
       const newUser = await this.userModel.create(firebaseUser);
+      console.log('newUser', newUser);
       return { user: newUser, statusCode: 201 };
     } catch (err) {
-      throw new Error(err);
+      throw new UnauthorizedException('Failed to create or update user');
     }
   }
 

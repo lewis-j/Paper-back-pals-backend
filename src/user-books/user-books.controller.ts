@@ -56,8 +56,12 @@ export class UserBooksController {
     @Request() req: RequestWithUID,
     @Body() body,
   ) {
+    console.log('nextBookRequestStatus');
+    console.log('request_id', request_id);
     const { user_id } = req.user;
     const { status } = body;
+    console.log('user_id', user_id);
+    console.log('status', status);
     return await this.userBooksService.nextRequestStatus(
       request_id,
       user_id,

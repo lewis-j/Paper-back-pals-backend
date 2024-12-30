@@ -13,7 +13,7 @@ import { createBookDto } from 'src/books/dto/createBookDto';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { requestTypeEnum } from 'src/notifications/dto/CreateNotificationDto';
 import { BookRequest, BookRequestDocument } from './schema/bookRequest.schema';
-import { status as bookRequestStatus, dueStatus } from './schema/status-enums';
+import { bookRequestStatus, dueStatus } from './schema/status-enums';
 import {
   bookRequestPopulateOptions,
   transformBookRequest,
@@ -167,7 +167,6 @@ export class UserBooksService {
         const [newNotification] =
           await this.notificationsService.createNotificationForTwoUsers(
             notificationPayload,
-            _session,
           );
 
         return {
@@ -227,7 +226,6 @@ export class UserBooksService {
       const [senderNotification, recipientNotification] =
         await this.notificationsService.createNotificationForTwoUsers(
           notificationPayload,
-          null,
         );
       return {
         bookRequest: request,
@@ -333,7 +331,6 @@ export class UserBooksService {
       const [senderNotification, recipientNotification] =
         await this.notificationsService.createNotificationForTwoUsers(
           notificationPayload,
-          _session,
         );
 
       if (_bookRequest.sender._id.toString() === user_id)
@@ -392,7 +389,6 @@ export class UserBooksService {
         const [senderNotification, recipientNotification] =
           await this.notificationsService.createNotificationForTwoUsers(
             notificationPayload,
-            _session,
           );
 
         // Return recipient's (owner's) notification since they declined it
@@ -444,7 +440,6 @@ export class UserBooksService {
         const [senderNotification, recipientNotification] =
           await this.notificationsService.createNotificationForTwoUsers(
             notificationPayload,
-            _session,
           );
 
         // Return sender's notification since they canceled it
@@ -546,7 +541,6 @@ export class UserBooksService {
               );
               await this.notificationsService.createNotificationForTwoUsers(
                 notificationPayload,
-                _session,
               );
             } catch (error) {
               console.error(
@@ -767,7 +761,6 @@ export class UserBooksService {
       const [senderNotification, recipientNotification] =
         await this.notificationsService.createNotificationForTwoUsers(
           notificationPayload,
-          null,
         );
       return {
         bookRequest: request,
