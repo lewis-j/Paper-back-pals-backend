@@ -3,6 +3,7 @@ export const friendRequestStatus = {
   REQUEST: 'REQUEST',
   ACCEPTED: 'ACCEPTED',
   DECLINED: 'DECLINED',
+  REMOVED: 'REMOVED',
 } as const;
 
 export type FriendRequestStatus =

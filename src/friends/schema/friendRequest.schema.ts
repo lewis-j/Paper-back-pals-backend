@@ -7,7 +7,23 @@ import {
   FriendRequestStatus,
 } from './friend-request-status';
 
-export type FriendRequestsDocument = FriendRequest & mongoose.Document;
+export interface FriendRequestsDocument extends mongoose.Document {
+  _id: mongoose.Schema.Types.ObjectId;
+  sender: User;
+  recipient: User;
+  status: FriendRequestStatus;
+  statusHistory: StatusHistory[];
+  updateStatus(options: StatusUpdateOptions): void;
+}
+
+export interface StatusUpdateOptions {
+  status: string;
+}
+
+interface StatusHistory {
+  status: string;
+  timestamp: Date;
+}
 
 @Schema({ timestamps: true })
 export class FriendRequest {
@@ -31,6 +47,30 @@ export class FriendRequest {
     default: friendRequestStatus.PENDING,
   })
   status: FriendRequestStatus;
+  @Prop([
+    {
+      status: { type: String, enum: Object.values(friendRequestStatus) },
+      timestamp: { type: Date, default: Date.now },
+    },
+  ])
+  statusHistory: StatusHistory[];
 }
 
 export const FriendRequestSchema = SchemaFactory.createForClass(FriendRequest);
+
+FriendRequestSchema.methods.updateStatus = function (
+  options: StatusUpdateOptions,
+) {
+  this.status = options.status;
+
+  const statusEntry: StatusHistory = {
+    status: options.status,
+    timestamp: new Date(),
+  };
+
+  if (!this.statusHistory) {
+    this.statusHistory = [];
+  }
+
+  this.statusHistory.push(statusEntry);
+};

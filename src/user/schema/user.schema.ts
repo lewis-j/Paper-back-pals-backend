@@ -161,7 +161,10 @@ const populateUser = async (findFunc) => {
       {
         path: 'borrowedBooks',
         populate: bookRequestPopulateOptions,
-        select: '_id userBook status currentPage dueDate',
+        match: {
+          status: { $ne: bookRequestStatus.RETURNED },
+        },
+        select: '_id userBook status currentPage dueDate statusHistory',
       },
       { path: 'currentRead', select: '_id' },
     ])

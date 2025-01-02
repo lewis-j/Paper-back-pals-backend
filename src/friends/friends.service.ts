@@ -32,11 +32,18 @@ export class FriendsService {
     const recipientAsObjectId = new Types.ObjectId(recipient_id);
 
     try {
-      const result = await this.friendRequest.findOne({
-        sender: userAsObjectId,
-        recipient: recipientAsObjectId,
+      const existingRequest = await this.friendRequest.findOne({
+        $or: [
+          { sender: userAsObjectId, recipient: recipientAsObjectId },
+          { sender: recipientAsObjectId, recipient: userAsObjectId },
+        ],
+        status: {
+          $nin: [friendRequestStatus.DECLINED, friendRequestStatus.REMOVED],
+        },
       });
-      if (result) throw Error('Request already exist');
+
+      if (existingRequest)
+        throw Error('Request already exists or friendship is active');
 
       const friendRequest = new this.friendRequest({
         sender: userAsObjectId,
@@ -55,7 +62,7 @@ export class FriendsService {
       const [notification] = await this.createNotification(
         user_id,
         recipient_id,
-        newFriendRequest._id,
+        newFriendRequest._id.toString(),
         friendRequestStatus.PENDING,
       );
       const populatedNotification = await notification.populate({
@@ -90,7 +97,7 @@ export class FriendsService {
     try {
       const session = await this.connection.startSession();
       const friend = await this.withTransaction(session, async () => {
-        request.status = friendRequestStatus.ACCEPTED;
+        request.updateStatus({ status: friendRequestStatus.ACCEPTED });
         await request.save({ session: session });
         return await this.usersService.addFriendFromRequest(request, session);
       });
@@ -102,6 +109,42 @@ export class FriendsService {
         friendRequestStatus.ACCEPTED,
       );
       return { friend, notification };
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  };
+
+  public removeFriend = async (friend_id: string, user_id: string) => {
+    const userObjectId = new Types.ObjectId(user_id);
+    const friendObjectId = new Types.ObjectId(friend_id);
+
+    const request = await this.friendRequest.findOne({
+      $or: [
+        { sender: userObjectId, recipient: friendObjectId },
+        { sender: friendObjectId, recipient: userObjectId },
+      ],
+    });
+
+    if (!request) {
+      throw new NotFoundException(
+        'Friend request not found between these users',
+      );
+    }
+
+    try {
+      const session = await this.connection.startSession();
+      await this.withTransaction(session, async () => {
+        request.updateStatus({ status: friendRequestStatus.REMOVED });
+        await request.save({ session });
+        await this.usersService.removeFriendFromBothUsers(
+          user_id,
+          friend_id,
+          session,
+        );
+      });
+      session.endSession();
+
+      return { success: true };
     } catch (error) {
       return Promise.reject(error);
     }

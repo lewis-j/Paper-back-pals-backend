@@ -29,6 +29,12 @@ export class UserBooksController {
     const { user_id } = req.user;
     return this.userBooksService.createUserBook(user_id, userBook);
   }
+  @Get('request/returned-books')
+  async getRet(@Request() req: RequestWithUID) {
+    const { user_id } = req.user;
+    return await this.userBooksService.getReturnedBooks(user_id);
+  }
+
   @Get('request/:id')
   async getOneRequest(@Param('id') request_id: string) {
     return await this.userBooksService.getBookRequest(request_id);
@@ -86,6 +92,7 @@ export class UserBooksController {
       status,
     );
   }
+
   @Put('request/:id/status/return/cancel')
   async cancelReturnRequest(
     @Param('id') request_id,
@@ -119,7 +126,9 @@ export class UserBooksController {
     @Param('id') request_id: string,
     @Request() req: RequestWithUID,
   ) {
+    console.log('declineBookRequest');
     const { user_id } = req.user;
+    console.log('user_id', user_id);
     return await this.userBooksService.declineBookRequest(request_id, user_id);
   }
   @Put('request/:id/cancel')

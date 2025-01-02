@@ -154,4 +154,22 @@ export class UserService {
     await _recipient.save();
     return await _sender.save();
   }
+
+  public removeFriendFromBothUsers = async (
+    user_id: string,
+    friend_id: string,
+    session: ClientSession,
+  ) => {
+    await this.userModel.updateOne(
+      { _id: user_id },
+      { $pull: { friends: friend_id } },
+      { session },
+    );
+
+    await this.userModel.updateOne(
+      { _id: friend_id },
+      { $pull: { friends: user_id } },
+      { session },
+    );
+  };
 }

@@ -7,6 +7,7 @@ import {
   NotAcceptableException,
   Param,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -49,5 +50,13 @@ export class FriendsController {
       console.log('error in post friend request', error.message);
       throw new HttpException(error.message, HttpStatus.CONFLICT);
     }
+  }
+  @Put('remove/:id')
+  async removeFriend(
+    @Param('id') friend_id: string,
+    @Req() req: RequestWithUID,
+  ) {
+    const { user_id } = req.user;
+    return await this.friendsService.removeFriend(friend_id, user_id);
   }
 }

@@ -243,6 +243,51 @@ export class UserBooksService {
     }
   }
 
+  public async getReturnedBooks(user_id: string) {
+    const [borrowedBooks, lentBooks] = await Promise.all([
+      // Books the user borrowed
+      this.bookRequestModel
+        .find({
+          status: bookRequestStatus.RETURNED,
+          sender: new Types.ObjectId(user_id),
+        })
+        .populate([
+          {
+            path: 'userBook',
+            populate: [
+              { path: 'book' },
+              { path: 'owner', select: '_id username profilePic' },
+            ],
+          },
+          {
+            path: 'sender',
+            select: '_id name',
+          },
+        ])
+        .then((borrowedBooks) => borrowedBooks.map(transformBookRequest)),
+
+      // Books the user lent
+      this.bookRequestModel
+        .find({
+          status: bookRequestStatus.RETURNED,
+        })
+        .populate([
+          {
+            path: 'userBook',
+            match: { owner: new Types.ObjectId(user_id) },
+            populate: [{ path: 'book' }, { path: 'owner', select: '_id name' }],
+          },
+          {
+            path: 'sender',
+            select: '_id username profilePic',
+          },
+        ])
+        .then((requests) => requests.filter((request) => request.userBook)),
+    ]);
+
+    return { borrowedBooks, lentBooks };
+  }
+
   private async createNewRequest(sender_id: string, userBook_id: string) {
     const senderAsObjectId = new Types.ObjectId(sender_id);
     const userBookAsObjectId = new Types.ObjectId(userBook_id);
