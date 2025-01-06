@@ -8,9 +8,13 @@ import { UserBooks } from 'src/user-books/schema/userbooks.schema';
 import { User } from 'src/user/schema/user.schema';
 import { Transform, Type } from 'class-transformer';
 import { bookRequestStatus, BookRequestStatus } from './status-enums';
+import {
+  bookRequestStateMachine,
+  pictureRequiredStatuses,
+} from '../state-machine/book-request.state-machine';
 
 export interface StatusUpdateOptions {
-  status: string;
+  status: BookRequestStatus;
   imageUrl?: string;
 }
 
@@ -84,8 +88,11 @@ export const BookRequestSchema = SchemaFactory.createForClass(BookRequest);
 BookRequestSchema.methods.updateStatus = function (
   options: StatusUpdateOptions,
 ) {
-  if (this.pictureRequired && !options.imageUrl) {
-    throw new Error('Image is required for status updates on this request');
+  const isPictureRequiredForStatus =
+    bookRequestStateMachine.pictureRequiredStatuses.includes(options.status);
+
+  if (this.pictureRequired && isPictureRequiredForStatus && !options.imageUrl) {
+    throw new Error(`Image is required for status update to ${options.status}`);
   }
 
   this.status = options.status;

@@ -13,11 +13,17 @@ import { createBookDto } from 'src/books/dto/createBookDto';
 import { NotificationsService } from 'src/notifications/notifications.service';
 import { requestTypeEnum } from 'src/notifications/dto/CreateNotificationDto';
 import { BookRequest, BookRequestDocument } from './schema/bookRequest.schema';
-import { bookRequestStatus, dueStatus } from './schema/status-enums';
+import {
+  BookRequestStatus,
+  bookRequestStatus,
+  dueStatus,
+} from './schema/status-enums';
 import {
   bookRequestPopulateOptions,
   transformBookRequest,
 } from 'src/util/populate.utils';
+import { bookRequestStateMachine } from './state-machine/book-request.state-machine';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class UserBooksService {
@@ -29,20 +35,24 @@ export class UserBooksService {
     private bookService: BooksService,
     private notificationsService: NotificationsService,
     @InjectConnection() private connection: Connection,
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   // CRUD Operations
   public async createUserBook(user_id: string, book: createBookDto) {
-    const book_id = await this.bookService.createBook(book);
-
-    const userId = new Types.ObjectId(user_id);
-
-    const userBook = new this.userBooksModel({
-      book: book_id,
-      owner: userId,
-    });
-    const newUserBook = await userBook.save();
-    return newUserBook.populate(['book', 'owner']);
+    try {
+      const book_id = await this.bookService.createBook(book);
+      const userId = new Types.ObjectId(user_id);
+      const userBook = new this.userBooksModel({
+        book: book_id,
+        owner: userId,
+      });
+      const newUserBook = await userBook.save();
+      return newUserBook.populate(['book', 'owner']);
+    } catch (error) {
+      console.error('Failed to create user book:', error);
+      throw new BadRequestException('Failed to create user book');
+    }
   }
 
   public async deleteUserBook(user_id: string, userbook_id: string) {
@@ -92,9 +102,14 @@ export class UserBooksService {
 
   // Request Operations
   public async getBookRequest(request_id: string) {
-    return this.bookRequestModel.findById(request_id, null, {
-      populate: { path: 'userBook', populate: 'book' },
-    });
+    try {
+      return await this.bookRequestModel.findById(request_id, null, {
+        populate: { path: 'userBook', populate: 'book' },
+      });
+    } catch (error) {
+      console.error('Failed to get book request:', error);
+      throw new BadRequestException('Failed to get book request');
+    }
   }
 
   public async createBookRequest(user_id: string, userBook_id: string) {
@@ -342,64 +357,83 @@ export class UserBooksService {
     request_id: string,
     user_id: string,
     nextStatus: string,
-    imageUrl?: string,
+    imageFile?: Express.Multer.File,
   ) {
-    const bookRequest = await this.bookRequestModel.findById(request_id);
-    if (!bookRequest) throw new NotFoundException('The request does not exist');
+    const bookRequest = await this.bookRequestModel
+      .findById(request_id)
+      .populate('userBook');
 
-    const session = await this.connection.startSession();
-    const _statusEnum = Object.values(bookRequestStatus);
-    const idx = _statusEnum.findIndex(
-      (status) => status === bookRequest.status,
-    );
-
-    const _status = _statusEnum[idx + 1];
-    if (_status !== nextStatus) throw new BadRequestException('Invalid status');
-
-    // Use the new updateStatus method
-    bookRequest.updateStatus({
-      status: _status,
-      imageUrl,
-    });
-
-    if (_status === bookRequestStatus.CHECKED_OUT) {
-      bookRequest.dueDate = new Date(+new Date() + 30 * 24 * 60 * 60 * 1000);
+    if (!bookRequest) {
+      throw new NotFoundException('Request not found');
     }
 
-    const result = await this.withTransaction(session, async (_session) => {
-      const _bookRequest = await bookRequest.save({ session: _session });
+    if (!bookRequestStateMachine.isValidStatus(nextStatus)) {
+      throw new BadRequestException('Invalid status provided');
+    }
 
-      const notificationPayload = await this.getPayloadFromBookRequest(
-        _bookRequest,
+    const userRole =
+      bookRequest.userBook.owner.toString() === user_id ? 'owner' : 'sender';
+
+    if (
+      !bookRequestStateMachine.canTransition(
+        bookRequest.status as BookRequestStatus,
+        nextStatus as BookRequestStatus,
+        userRole,
+        bookRequest,
+        imageFile,
+      )
+    ) {
+      throw new BadRequestException(
+        `Invalid status transition from ${bookRequest.status} to ${nextStatus} for ${userRole}`,
       );
+    }
 
-      const [senderNotification, recipientNotification] =
-        await this.notificationsService.createNotificationForTwoUsers(
-          notificationPayload,
+    const session = await this.connection.startSession();
+
+    try {
+      let imageUrl = null;
+      if (imageFile) {
+        imageUrl = await this.cloudinaryService.uploadImage(imageFile);
+      }
+
+      const result = await this.withTransaction(session, async (_session) => {
+        // Update status with image if provided
+        bookRequest.updateStatus({
+          status: nextStatus,
+          imageUrl: imageUrl || undefined,
+        });
+
+        // Set due date if checking out
+        if (nextStatus === bookRequestStatus.CHECKED_OUT) {
+          bookRequest.dueDate = new Date(
+            +new Date() + 30 * 24 * 60 * 60 * 1000,
+          );
+        }
+
+        const _bookRequest = await bookRequest.save({ session: _session });
+        const notificationPayload = await this.getPayloadFromBookRequest(
+          _bookRequest,
         );
-      console.log(
-        'is borrower?',
-        _bookRequest.sender._id.toString() === user_id,
-        _bookRequest.sender._id.toString(),
-        user_id,
-      );
 
-      if (_bookRequest.sender._id.toString() === user_id) {
-        console.log('is borrower', senderNotification);
+        const [senderNotification, recipientNotification] =
+          await this.notificationsService.createNotificationForTwoUsers(
+            notificationPayload,
+          );
+
+        // Return appropriate notification based on who made the update
+
         return {
-          notification: await senderNotification.populate('user'),
+          notification: await (userRole === 'sender'
+            ? senderNotification
+            : recipientNotification
+          ).populate('user'),
           bookRequest: _bookRequest,
         };
-      }
-      console.log('is lender', recipientNotification);
-      return {
-        notification: await recipientNotification.populate('user'),
-        bookRequest: _bookRequest,
-      };
-    });
-    session.endSession();
-
-    return result;
+      });
+      return result;
+    } finally {
+      session.endSession();
+    }
   }
 
   public async declineBookRequest(request_id: string, user_id: string) {
@@ -508,13 +542,28 @@ export class UserBooksService {
   }
 
   public async updatePageCount(request_id: string, pageCount: number) {
-    console.log(
-      'request id and pagecount in user books service',
-      request_id,
-      pageCount,
-    );
+    try {
+      const bookRequest = await this.bookRequestModel.findById(request_id);
+      if (!bookRequest) {
+        throw new NotFoundException('Book request not found');
+      }
+      bookRequest.currentPage = pageCount;
+      return await bookRequest.save();
+    } catch (error) {
+      console.error('Failed to update page count:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to update page count');
+    }
+  }
+
+  public async updatePictureRequired(
+    request_id: string,
+    pictureRequired: boolean,
+  ) {
     const bookRequest = await this.bookRequestModel.findById(request_id);
-    bookRequest.currentPage = pageCount;
+    bookRequest.pictureRequired = pictureRequired;
     return await bookRequest.save();
   }
 
@@ -831,5 +880,31 @@ export class UserBooksService {
       }
       throw new BadRequestException('Failed to cancel return request');
     }
+  }
+
+  public async addImageToStatus(
+    request_id: string,
+    status: string,
+    imageUrl: string,
+  ) {
+    const bookRequest = await this.bookRequestModel.findById(request_id);
+    if (!bookRequest) {
+      throw new NotFoundException('Book request not found');
+    }
+
+    // Find the specific status history entry
+    const statusEntry = bookRequest.statusHistory.find(
+      (entry) => entry.status === status,
+    );
+    if (!statusEntry) {
+      throw new BadRequestException(
+        `No status history entry found for status: ${status}`,
+      );
+    }
+
+    // Add the image URL to the status entry
+    statusEntry.imageUrl = imageUrl;
+
+    return await bookRequest.save();
   }
 }

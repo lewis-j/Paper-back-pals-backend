@@ -10,14 +10,23 @@ export const bookRequestPopulateOptions: PopulateOptions = {
 };
 
 export const transformBookRequest = (request: any) => {
-  const { _id, userBook, status, statusHistory, currentPage, dueDate } =
-    request;
+  console.log('request', request);
+  const {
+    _id,
+    userBook,
+    status,
+    statusHistory,
+    currentPage,
+    dueDate,
+    pictureRequired,
+  } = request;
   return {
     _id: userBook._id,
     book: userBook.book,
     owner: userBook.owner,
-    statusHistory,
     request: {
+      pictureRequired,
+      statusHistory,
       status,
       _id: _id.toString(),
       ...(request.sender && { sender: request.sender }),

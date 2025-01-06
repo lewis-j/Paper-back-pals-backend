@@ -12,11 +12,13 @@ import { GoogleUserDto } from './dto/GoogleUserDto';
 import { UpdateUserDto } from './dto/UpdateUserDto';
 import { User } from './schema/user.schema';
 import { AuthUserDoc } from './schema/UserModel.interface';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private readonly userModel: AuthUserDoc,
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   async upsertFireUser(firebaseUser: GoogleUserDto) {
@@ -86,12 +88,13 @@ export class UserService {
     }
   }
 
-  public async setProfileImg(user_id, imgUrl) {
+  public async setProfileImg(user_id, imgFile) {
     try {
+      const imageUrl = await this.cloudinaryService.uploadImage(imgFile);
       const updatedUser = await this.userModel.findByIdAndUpdate(
         user_id,
         {
-          profilePic: imgUrl,
+          profilePic: imageUrl,
         },
         {
           new: true,
@@ -172,4 +175,12 @@ export class UserService {
       { session },
     );
   };
+
+  async updateBio(userId: string, newBio: string) {
+    return this.userModel.findByIdAndUpdate(
+      userId,
+      { bio: newBio },
+      { new: true },
+    );
+  }
 }

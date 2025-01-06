@@ -16,6 +16,7 @@ import {
 } from 'src/util/populate.utils';
 import { friendRequestStatus } from 'src/friends/schema/friend-request-status';
 import { bookRequestStatus } from 'src/user-books/schema/status-enums';
+import { Rating } from 'src/rating/schema/rating.schema';
 
 export type UserDocument = User & Document;
 
@@ -44,6 +45,9 @@ export class User {
 
   @Prop({ required: true })
   profilePic: string;
+
+  @Prop({ default: '' })
+  bio: string;
 
   @Prop({ required: true })
   email: string;
@@ -74,6 +78,9 @@ export class User {
   friendRequestOutbox: FriendRequest[];
   @Type(() => Notifications)
   notifications: Notifications[];
+
+  @Type(() => Rating)
+  ratings: Rating[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
@@ -102,6 +109,12 @@ UserSchema.virtual('ownedBooks', {
   ref: 'UserBooks',
   localField: '_id',
   foreignField: 'owner',
+});
+
+UserSchema.virtual('ratings', {
+  ref: 'Rating',
+  localField: '_id',
+  foreignField: 'user',
 });
 
 const populateUser = async (findFunc) => {
@@ -152,7 +165,8 @@ const populateUser = async (findFunc) => {
                 ],
               },
             },
-            select: '_id status dueDate currentPage createdAt',
+            select:
+              '_id status dueDate currentPage createdAt pictureRequired statusHistory',
             populate: { path: 'sender', select: '_id' },
           },
         ],
@@ -162,11 +176,24 @@ const populateUser = async (findFunc) => {
         path: 'borrowedBooks',
         populate: bookRequestPopulateOptions,
         match: {
-          status: { $ne: bookRequestStatus.RETURNED },
+          $nin: [
+            bookRequestStatus.RETURNED,
+            bookRequestStatus.RETURN_REQUESTED,
+            bookRequestStatus.DECLINED_BY_OWNER,
+            bookRequestStatus.CANCELED_BY_SENDER,
+          ],
         },
-        select: '_id userBook status currentPage dueDate statusHistory',
+        select:
+          '_id userBook status currentPage dueDate statusHistory pictureRequired',
       },
       { path: 'currentRead', select: '_id' },
+      {
+        path: 'ratings',
+        populate: {
+          path: 'book',
+          select: '_id title coverImg authors',
+        },
+      },
     ])
     .exec();
   if (user?.borrowedBooks) {

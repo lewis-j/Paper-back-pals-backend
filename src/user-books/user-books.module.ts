@@ -8,6 +8,7 @@ import { NotificationsModule } from 'src/notifications/notifications.module';
 import { BookRequest, BookRequestSchema } from './schema/bookRequest.schema';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UserBooksScheduler } from './user-books.scheduler';
+import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { UserBooksScheduler } from './user-books.scheduler';
       },
     ]),
     ScheduleModule.forRoot(),
+    CloudinaryModule,
   ],
   controllers: [UserBooksController],
   providers: [UserBooksService, UserBooksScheduler],

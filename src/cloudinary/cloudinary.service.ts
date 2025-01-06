@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { v2 as cloudinary } from 'cloudinary';
-import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class CloudinaryService {
-  constructor(private userService: UserService) {
+  constructor() {
     cloudinary.config({
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
       api_key: process.env.CLOUDINARY_API_KEY,
@@ -12,14 +11,13 @@ export class CloudinaryService {
     });
   }
 
-  async uploadImage(file: Express.Multer.File, user_Id: string): Promise<any> {
+  async uploadImage(file: Express.Multer.File): Promise<any> {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         { resource_type: 'auto', type: 'authenticated' },
         (error, result) => {
           if (error) return reject(error);
-          this.userService.setProfileImg(user_Id, result.url);
-          resolve(result);
+          resolve(result.url);
         },
       );
       uploadStream.end(file.buffer);

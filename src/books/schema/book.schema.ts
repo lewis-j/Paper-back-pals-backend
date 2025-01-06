@@ -22,6 +22,12 @@ export class Books {
 
   @Prop({ required: true })
   pageCount: number;
+
+  @Prop({ default: 0 })
+  averageRating: number;
+
+  @Prop({ default: 0 })
+  numberOfRatings: number;
 }
 
 export const BooksSchema = SchemaFactory.createForClass(Books);

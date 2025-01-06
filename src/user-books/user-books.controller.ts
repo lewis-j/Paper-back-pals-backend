@@ -9,12 +9,14 @@ import {
   UseGuards,
   UseInterceptors,
   Delete,
+  UploadedFile,
 } from '@nestjs/common';
 import { createBookDto } from 'src/books/dto/createBookDto';
 import { JwtAuthGuard } from 'src/authentication/jwt-auth-guard';
 import { UserBooksService } from './user-books.service';
 import RequestWithUID from 'src/authentication/requestWithUID.interface';
 import MongooseClassSerializerInterceptor from 'src/authentication/mongooseClassSerializer.interceptor';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @UseGuards(JwtAuthGuard)
 @Controller('user-books')
@@ -57,21 +59,21 @@ export class UserBooksController {
     return { bookRequest, notification };
   }
   @Put('request/:id/status/next')
+  @UseInterceptors(FileInterceptor('image'))
   async nextBookRequestStatus(
     @Param('id') request_id,
     @Request() req: RequestWithUID,
-    @Body() body,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { status: string },
   ) {
-    console.log('nextBookRequestStatus');
-    console.log('request_id', request_id);
     const { user_id } = req.user;
     const { status } = body;
-    console.log('user_id', user_id);
-    console.log('status', status);
+
     return await this.userBooksService.nextRequestStatus(
       request_id,
       user_id,
       status,
+      file,
     );
   }
   @Put('request/:id/status/return')
@@ -121,6 +123,17 @@ export class UserBooksController {
     );
     console.log('result in user books', result);
   }
+  @Put('request/:id/updatePictureRequired')
+  async updatePictureRequired(
+    @Param('id') request_id: string,
+    @Body() body: any,
+  ) {
+    const { pictureRequired } = body;
+    return await this.userBooksService.updatePictureRequired(
+      request_id,
+      pictureRequired,
+    );
+  }
   @Put('request/:id/decline')
   async declineBookRequest(
     @Param('id') request_id: string,
@@ -146,5 +159,17 @@ export class UserBooksController {
   ) {
     const { user_id } = req.user;
     return await this.userBooksService.deleteUserBook(user_id, userbook_id);
+  }
+  @Put('request/:id/status/image')
+  async addImageToStatus(
+    @Param('id') request_id: string,
+    @Body() body: { imageUrl: string; status: string },
+  ) {
+    const { imageUrl, status } = body;
+    return await this.userBooksService.addImageToStatus(
+      request_id,
+      status,
+      imageUrl,
+    );
   }
 }
