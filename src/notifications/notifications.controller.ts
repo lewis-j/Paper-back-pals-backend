@@ -27,7 +27,6 @@ export class NotificationsController {
   }
   @Put('isRead/:id')
   async setIsRead(@Param('id') notification_id) {
-    console.log('setting is read', notification_id);
     const notification = await this.notificationServices.markAsRead(
       notification_id,
     );

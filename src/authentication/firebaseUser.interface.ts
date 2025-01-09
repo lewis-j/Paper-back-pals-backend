@@ -4,5 +4,6 @@ interface FirebaseUser {
   profilePic: string;
   email: string;
   email_verified: boolean;
+  sign_in_provider: string;
 }
 export default FirebaseUser;

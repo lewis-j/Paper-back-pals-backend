@@ -15,7 +15,9 @@ import MongooseClassSerializerInterceptor from 'src/authentication/mongooseClass
 import RequestWithUID from 'src/authentication/requestWithUID.interface';
 import { User } from './schema/user.schema';
 import { UserService } from './user.service';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import RequestWithUser from 'src/authentication/requestWithUser.interface';
+import { UpdateUserProfileDto } from './dto/UpdateUserDto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('user')
@@ -29,6 +31,16 @@ export class UserController {
       const user = await this.userService.searchUserName(searchQuery);
       return user;
     }
+  }
+  @Put('update')
+  @UseInterceptors(MongooseClassSerializerInterceptor(User))
+  async updateUser(
+    @Request() req: RequestWithUID,
+    @Body() body: UpdateUserProfileDto,
+  ) {
+    const { user_id } = req.user;
+    console.log(user_id, body);
+    return await this.userService.updateUser(user_id, body);
   }
 
   @Get(':id')
@@ -50,14 +62,14 @@ export class UserController {
 
   @Put('profile-image')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FilesInterceptor('image'))
+  @UseInterceptors(FileInterceptor('image'))
   async updateProfileImage(
     @Request() req,
     @UploadedFile() file: Express.Multer.File,
   ) {
     const userId = req.user.user_id;
-
-    return this.userService.setProfileImg(userId, file);
+    const imageUrl = await this.userService.setProfileImg(userId, file);
+    return imageUrl;
   }
 
   @Put('bio')

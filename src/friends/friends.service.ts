@@ -70,13 +70,12 @@ export class FriendsService {
         model: 'FriendRequest',
         select: 'status',
       });
-      console.log('populatedNotification', populatedNotification);
       return {
         notification: populatedNotification,
         newFriendRequest: friendRequestObj,
       };
     } catch (error) {
-      console.log('Error:::', error);
+      console.error('Error:::', error);
       return Promise.reject(error);
     }
   };
@@ -87,7 +86,6 @@ export class FriendsService {
   };
 
   public addFriend = async (request_id: string, user_id: string) => {
-    console.log('addFriend', request_id, user_id);
     const request = await this.friendRequest.findById(request_id);
     if (!request) throw new NotFoundException('request does not exist!');
     const { recipient, sender } = request;

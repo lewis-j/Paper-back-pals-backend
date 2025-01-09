@@ -128,7 +128,6 @@ export class UserBooksService {
         return this.processBookRequest(existingRequest, userBook_id);
       } else {
         // Other active request exists
-        console.log(`book request from user: ${user_id} exists!`);
         throw new ConflictException(
           `book request from user: ${user_id} exists!`,
         );
@@ -201,7 +200,6 @@ export class UserBooksService {
     status: string,
   ) {
     try {
-      console.log('request return service');
       const bookRequest = (await this.bookRequestModel
         .findOne({ _id: request_id })
         .populate({
@@ -212,22 +210,16 @@ export class UserBooksService {
         .exec()) as BookRequestDocument;
 
       if (!bookRequest) {
-        console.log('Book request not found');
         throw new NotFoundException('Book request not found');
       }
 
       if (bookRequest.status !== bookRequestStatus.CHECKED_OUT) {
-        console.log(
-          'Book request is not in the CHECKED_OUT status',
-          bookRequest.status,
-        );
         throw new BadRequestException(
           'Book request is not in the CHECKED_OUT status',
         );
       }
 
       if (bookRequest.userBook.owner.toString() !== user_id) {
-        console.log('Only the Lender can request a return');
         throw new UnauthorizedException('Only the Lender can request a return');
       }
 
@@ -247,7 +239,7 @@ export class UserBooksService {
         notification: await senderNotification.populate('user'),
       };
     } catch (error) {
-      console.log('error', error);
+      console.error('error', error);
       if (
         error instanceof NotFoundException ||
         error instanceof UnauthorizedException
@@ -316,8 +308,6 @@ export class UserBooksService {
     const bookRequest = await this.bookRequestModel
       .findById(request_id)
       .populate('userBook');
-
-    console.log('bookRequest', bookRequest);
 
     if (!bookRequest) {
       throw new NotFoundException('Book request not found');
@@ -821,7 +811,6 @@ export class UserBooksService {
     status: string,
   ) {
     try {
-      console.log('cancel return request service');
       const bookRequest = await this.bookRequestModel
         .findById(request_id)
         .populate({
@@ -831,22 +820,16 @@ export class UserBooksService {
         .exec();
 
       if (!bookRequest) {
-        console.log('Book request not found');
         throw new NotFoundException('Book request not found');
       }
 
       if (bookRequest.status !== bookRequestStatus.RETURN_REQUESTED) {
-        console.log(
-          'Book request is not in the RETURN_REQUESTED status',
-          bookRequest.status,
-        );
         throw new BadRequestException(
           'Book request is not in the RETURN_REQUESTED status',
         );
       }
 
       if (bookRequest.userBook.owner.toString() !== user_id) {
-        console.log('Only the Lender can cancel a return request');
         throw new UnauthorizedException(
           'Only the Lender can cancel a return request',
         );
@@ -871,7 +854,7 @@ export class UserBooksService {
         notification: await senderNotification.populate('user'),
       };
     } catch (error) {
-      console.log('error', error);
+      console.error('error', error);
       if (
         error instanceof NotFoundException ||
         error instanceof UnauthorizedException
@@ -880,6 +863,21 @@ export class UserBooksService {
       }
       throw new BadRequestException('Failed to cancel return request');
     }
+  }
+
+  public async getAllBookRequests(user_id: string) {
+    return await this.bookRequestModel
+      .find({
+        $or: [
+          { sender: new Types.ObjectId(user_id) },
+          { 'userBook.owner': new Types.ObjectId(user_id) },
+        ],
+      })
+      .select('statusHistory')
+      .populate({
+        path: 'sender',
+        select: '_id username profilePic',
+      });
   }
 
   public async addImageToStatus(

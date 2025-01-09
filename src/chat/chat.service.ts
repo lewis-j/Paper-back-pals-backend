@@ -44,8 +44,6 @@ export class ChatService {
   }
 
   async getChatRoomsForUser(userId: string): Promise<ChatRoom[]> {
-    console.log('Getting chat rooms for user:', userId);
-
     // Convert userId to ObjectId if needed
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
@@ -53,8 +51,6 @@ export class ChatService {
       .find({ participants: userObjectId })
       .lean()
       .exec();
-
-    console.log('Basic rooms (without population):', basicRooms);
 
     const rooms = await this.chatRoomModel
       .find({ participants: userObjectId })
@@ -66,8 +62,6 @@ export class ChatService {
       })
       .lean()
       .exec();
-
-    console.log('Rooms after population:', rooms);
 
     if (rooms.length === 0) {
       return [];
@@ -82,8 +76,6 @@ export class ChatService {
           .lean()
           .exec();
 
-        console.log(`Last message for room ${room.roomId}:`, lastMessage);
-
         return {
           ...room,
           lastMessage,
@@ -91,7 +83,6 @@ export class ChatService {
       }),
     );
 
-    console.log('Final rooms with messages:', roomsWithLastMessage);
     return roomsWithLastMessage;
   }
 }

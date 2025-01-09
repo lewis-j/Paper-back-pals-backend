@@ -10,7 +10,6 @@ export const bookRequestPopulateOptions: PopulateOptions = {
 };
 
 export const transformBookRequest = (request: any) => {
-  console.log('request', request);
   const {
     _id,
     userBook,

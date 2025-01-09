@@ -36,18 +36,23 @@ export class UserBooksController {
     const { user_id } = req.user;
     return await this.userBooksService.getReturnedBooks(user_id);
   }
+  @Get('request/all')
+  async getAllRequests(@Request() req: RequestWithUID) {
+    const { user_id } = req.user;
+    return await this.userBooksService.getAllBookRequests(user_id);
+  }
 
   @Get('request/:id')
   async getOneRequest(@Param('id') request_id: string) {
     return await this.userBooksService.getBookRequest(request_id);
   }
+
   @Delete('request/:id')
   async deleteOneRequest(
     @Param('id') request_id: string,
     @Request() req: RequestWithUID,
   ) {
     const { user_id } = req.user;
-    console.log('delete request', request_id, user_id);
     return await this.userBooksService.deleteBookRequest(request_id, user_id);
   }
   @Post('request')
@@ -84,10 +89,6 @@ export class UserBooksController {
   ) {
     const { user_id } = req.user;
     const { status } = body;
-    console.log('request return');
-    console.log('request_id', request_id);
-    console.log('user_id', user_id);
-    console.log('status', status);
     return await this.userBooksService.requestReturn(
       request_id,
       user_id,
@@ -103,10 +104,6 @@ export class UserBooksController {
   ) {
     const { user_id } = req.user;
     const { status } = body;
-    console.log('request return');
-    console.log('request_id', request_id);
-    console.log('user_id', user_id);
-    console.log('status', status);
     return await this.userBooksService.cancelReturnRequest(
       request_id,
       user_id,
@@ -116,12 +113,11 @@ export class UserBooksController {
   @Put('request/:id/updatePageCount')
   async updatePageCount(@Param('id') request_id, @Body() body: any) {
     const { currentPage } = body;
-    console.log('request_id in user books', request_id);
     const result = await this.userBooksService.updatePageCount(
       request_id,
       currentPage,
     );
-    console.log('result in user books', result);
+    return result;
   }
   @Put('request/:id/updatePictureRequired')
   async updatePictureRequired(
@@ -139,9 +135,7 @@ export class UserBooksController {
     @Param('id') request_id: string,
     @Request() req: RequestWithUID,
   ) {
-    console.log('declineBookRequest');
     const { user_id } = req.user;
-    console.log('user_id', user_id);
     return await this.userBooksService.declineBookRequest(request_id, user_id);
   }
   @Put('request/:id/cancel')

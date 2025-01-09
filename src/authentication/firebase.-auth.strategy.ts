@@ -23,20 +23,22 @@ export class FirebaseAuthStrategy extends PassportStrategy(
       .auth()
       .verifyIdToken(token, true)
       .catch((err) => {
-        console.log(err);
+        console.error(err);
         throw new UnauthorizedException(err.message);
       });
     if (!firebaseUser) {
       throw new UnauthorizedException();
     }
-
-    const { user_id, name, email, email_verified, picture } = firebaseUser;
+    console.log('firebaseUser', firebaseUser);
+    const { user_id, name, email, email_verified, picture, firebase } =
+      firebaseUser;
     return {
       firebase_id: user_id,
       username: name,
       email,
       email_verified,
       profilePic: picture,
+      sign_in_provider: firebase.sign_in_provider,
     };
   }
 }

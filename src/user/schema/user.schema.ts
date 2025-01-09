@@ -49,11 +49,20 @@ export class User {
   @Prop({ default: '' })
   bio: string;
 
+  @Prop({ default: '' })
+  location: string;
+
+  @Prop({ default: 'public' })
+  visibility: string;
+
   @Prop({ required: true })
   email: string;
 
   @Prop({ default: false })
   email_verified: boolean;
+
+  @Prop({ required: true })
+  sign_in_provider: string;
 
   @Prop({ type: Schema.Types.ObjectId, ref: 'UserBooks', default: null })
   @Type(() => UserBooks)
@@ -208,7 +217,6 @@ UserSchema.static('getAuthUser', async function (user_id: string) {
 });
 //they should all have a firebase_id
 UserSchema.static('getFireUser', async function (firebase_id: string) {
-  console.log('getFireUser', firebase_id);
   return await populateUser(this.findOne({ firebase_id: firebase_id }));
 });
 

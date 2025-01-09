@@ -9,7 +9,7 @@ import { FriendRequest } from 'src/friends/schema/friendRequest.schema';
 import { CreateFireUserDto } from './dto/CreateFireUserDto';
 import { FireBaseUserDto } from './dto/FireBaseUserDto';
 import { GoogleUserDto } from './dto/GoogleUserDto';
-import { UpdateUserDto } from './dto/UpdateUserDto';
+import { UpdateUserProfileDto } from './dto/UpdateUserDto';
 import { User } from './schema/user.schema';
 import { AuthUserDoc } from './schema/UserModel.interface';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
@@ -22,12 +22,21 @@ export class UserService {
   ) {}
 
   async upsertFireUser(firebaseUser: GoogleUserDto) {
-    const { firebase_id: id } = firebaseUser;
+    const { firebase_id: id, email } = firebaseUser;
     try {
       const existingUser = await this.userModel.getFireUser(id);
-      if (existingUser) return { user: existingUser, statusCode: 200 };
+
+      if (existingUser) {
+        // Check if emails don't match
+        if (existingUser.email !== email) {
+          // Update the email in MongoDB to match Firebase
+          existingUser.email = email;
+          await existingUser.save();
+        }
+        return { user: existingUser, statusCode: 200 };
+      }
+
       const newUser = await this.userModel.create(firebaseUser);
-      console.log('newUser', newUser);
       return { user: newUser, statusCode: 201 };
     } catch (err) {
       throw new UnauthorizedException('Failed to create or update user');
@@ -64,31 +73,31 @@ export class UserService {
       return error;
     }
   }
-  async updateUser(
-    firebaseData: CreateFireUserDto,
-    updatedUser: UpdateUserDto,
-  ) {
-    const { firebase_id, email, email_verified } = firebaseData;
+  async updateUser(user_id: string, updatedUser: UpdateUserProfileDto) {
     try {
-      const user = await this.userModel.findOne({
-        firebaseId: firebase_id,
-      });
-      const userData = { ...updatedUser, email, email_verified };
+      const updated = await this.userModel.findByIdAndUpdate(
+        user_id,
+        { $set: updatedUser },
+        {
+          new: true,
+          runValidators: true,
+        },
+      );
 
-      if (!user) {
-        throw new NotFoundException('User does not exist');
+      if (!updated) {
+        throw new NotFoundException('User not found');
       }
-      [...Object.keys(updatedUser)].map((property) => {
-        user[`${property}`] = userData[`${property}`];
-      });
-      const { _id } = await user.save();
-      return { _id };
+
+      return updated;
     } catch (error) {
-      return error;
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Failed to update user');
     }
   }
 
-  public async setProfileImg(user_id, imgFile) {
+  public async setProfileImg(user_id: string, imgFile: Express.Multer.File) {
     try {
       const imageUrl = await this.cloudinaryService.uploadImage(imgFile);
       const updatedUser = await this.userModel.findByIdAndUpdate(
@@ -100,7 +109,7 @@ export class UserService {
           new: true,
         },
       );
-      return updatedUser;
+      return imageUrl;
     } catch (error) {
       return error;
     }

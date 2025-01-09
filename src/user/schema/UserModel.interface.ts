@@ -1,8 +1,12 @@
-import { Model } from 'mongoose';
-import { User, UserDocument } from './user.schema';
+import { Model, Document } from 'mongoose';
+import { User } from './user.schema';
+
+export interface UserDocument extends Omit<User, '_id'>, Document {
+  // Add any instance methods here if needed
+}
 
 export interface AuthUserDoc extends Model<UserDocument> {
-  getAuthUser: (_id: string) => Promise<User>;
-  getFireUser: (_id: string) => Promise<User>;
-  getUser: (_id: string) => Promise<User>;
+  getFireUser(firebase_id: string): Promise<UserDocument>;
+  getAuthUser(_id: string): Promise<UserDocument>;
+  getUser(_id: string): Promise<UserDocument>;
 }
